@@ -27,7 +27,7 @@ jobs:
       - name: Pull Docker image
         run: docker pull zixc1/solar-mission-control:latest
 
-      - name: Generate report
+      - name: Generate space weather report
         env:
           NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
         run: |
@@ -51,7 +51,7 @@ jobs:
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
 
-      - name: Upload GitHub Pages artifact
+      - name: Upload GitHub Pages website
         uses: actions/upload-pages-artifact@v4
         with:
           path: website
@@ -66,6 +66,6 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Deploy website
+      - name: Deploy GitHub Pages website
         id: deployment
         uses: actions/deploy-pages@v4
