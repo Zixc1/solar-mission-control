@@ -1,6 +1,3 @@
-cd ~/solar-mission-control
-
-cat > .github/workflows/space-weather-report.yml <<'YAML'
 name: Generate and Publish Space Weather Report
 
 on:
@@ -91,4 +88,3 @@ jobs:
       - name: Deploy website
         id: deployment
         uses: actions/deploy-pages@v4
-YAML
