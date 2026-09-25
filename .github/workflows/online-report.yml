@@ -7,35 +7,71 @@ on:
     - cron: "0 */6 * * *"
 
 permissions:
-  contents* read
+  contents: read
   pages: write
-  id-token: w*ite
+  id-token: write
 
 concurrency:
-  group: github-*ages
+  group: github-pages
   cancel-in-progress: true
 
-j*bs:
+jobs:
   generate-report:
-    runs-on* ubuntu-24.04
+    runs-on: ubuntu-24.04
 
     steps:
-      - *ame: Create output directory
-     *  run: mkdir -p output
+      - name: Create output directory
+        run: mkdir -p output
 
-      - na*e: Pull Solar Mission Control imag*
-        run: docker pull zixc1/so*ar-mission-control:latest
+      - name: Pull Solar Mission Control image
+        run: docker pull zixc1/solar-mission-control:latest
 
-      -*name: Generate full report
-       *env:
-          NASA_API_KEY: ${{ s*crets.NASA_API_KEY }}
-        run:*|
+      - name: Generate full report
+        env:
+          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+        run: |
           docker run --rm \
-    *       --user "$(id -u):$(id -g)" *
+            --user "$(id -u):$(id -g)" \
             --env NASA_API_KEY \
-*           --env HOME=/tmp \
-     *      --env MPLCONFIGDIR=/tmp/matp*otlib \
-            -v "$PWD/outpu*:/app/swrl_report" \
-            z*xc1/solar-mission-control:latest
+            --env HOME=/tmp \
+            --env MPLCONFIGDIR=/tmp/matplotlib \
+            -v "$PWD/output:/app/swrl_report" \
+            zixc1/solar-mission-control:latest
 
-*
+      - name: Prepare website
+        run: |
+          test -f output/space_weather_report.html
+          cp output/space_weather_report.html output/index.html
+          touch output/.nojekyll
+
+          echo "Website contents:"
+          find output -maxdepth 3 -type f | sort
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: output
+
+      - name: Upload downloadable report
+        uses: actions/upload-artifact@v4
+        with:
+          name: space-weather-report
+          path: output/
+          if-no-files-found: error
+          retention-days: 14
+
+  deploy:
+    runs-on: ubuntu-24.04
+    needs: generate-report
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy website
+        id: deployment
+        uses: actions/
