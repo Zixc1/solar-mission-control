@@ -28,3 +28,4 @@ output/
 .vscode/
 .idea/
 ``*
+.venv-pyenv-backup/
