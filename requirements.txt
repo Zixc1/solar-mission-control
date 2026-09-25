@@ -2,4 +2,4 @@ requests
 numpy
 matplotlib
 astropy
-sunpy
+sunpy[all]
