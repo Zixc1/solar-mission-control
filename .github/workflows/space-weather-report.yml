@@ -1,0 +1,95 @@
+name: Generate and Publish Space Weather Report
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    # Runs every 6 hours at 00:00, 06:00, 12:00, and 18:00 UTC.
+    - cron: "0 */6 * * *"
+
+permissions:
+  con*ents: read
+  pages: write
+  id-tok*n: write
+
+concurrency:
+  group: gi*hub-pages
+  cancel-in-progress: tr*e
+
+jobs:
+  generate-report:
+    na*e: Generate report
+    runs-on: ub*ntu-24.04
+    timeout-minutes: 30
+*    steps:
+      - name: Create ou*put directory
+        run: mkdir -* "$GITHUB_WORKSPACE/output"
+
+     *- name: Pull Solar Mission Control*image
+        run: docker pull zix*1/solar-mission-control:latest
+
+  *   - name: Generate full report
+  *     env:
+          NASA_API_KEY: *{{ secrets.NASA_API_KEY }}
+       *run: |
+          docker run --rm \*            --user "$(id -u):$(id *g)" \
+            --env NASA_API_K*Y \
+            --env HOME=/tmp \
+*           --env MPLCONFIGDIR=/tmp*matplotlib \
+            -v "$GITH*B_WORKSPACE/output:/output" \
+    *       zixc1/solar-mission-control*latest \
+            --output-dir *output
+
+      - name: Verify gener*ted report
+        run: |
+        * echo "Generated report contents:"*          find "$GITHUB_WORKSPACE/*utput" -maxdepth 3 -type f -print * sort
+
+          test -s "$GITHUB_*ORKSPACE/output/space_weather_repo*t.html"
+          test -s "$GITHUB*WORKSPACE/output/space_weather_rep*rt.txt"
+
+      - name: Prepare Git*ub Pages website
+        run: |
+  *       cp \
+            "$GITHUB_W*RKSPACE/output/space_weather_repor*.html" \
+            "$GITHUB_WORK*PACE/output/index.html"
+
+         *touch "$GITHUB_WORKSPACE/output/.n*jekyll"
+
+          echo "GitHub Pa*es website contents:"
+          fi*d "$GITHUB_WORKSPACE/output" -maxd*pth 3 -type f -print | sort
+
+     *- name: Configure GitHub Pages
+   *    uses: actions/configure-pages@*5
+
+      - name: Upload GitHub Pag*s artifact
+        uses: actions/u*load-pages-artifact@v4
+        wit*:
+          path: output
+         *include-hidden-files: true
+
+      * name: Upload downloadable report
+*       uses: actions/upload-artifa*t@v4
+        with:
+          name:*space-weather-report
+          pat*: output/
+          if-no-files-fo*nd: error
+          include-hidden*files: true
+          retention-da*s: 14
+
+  deploy:
+    name: Deploy *itHub Pages
+    runs-on: ubuntu-24*04
+    needs: generate-report
+
+   *permissions:
+      pages: write
+  *   id-token: write
+
+    environmen*:
+      name: github-pages
+      u*l: ${{ steps.deployment.outputs.pa*e_url }}
+
+    steps:
+      - name:*Deploy website
+        id: deploym*nt
+        uses: actions/deploy-pa*es@v4
