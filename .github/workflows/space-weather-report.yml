@@ -1,73 +1,61 @@
+cd ~/solar-mission-control
+
+cat > .github/workflows/space-weather-report.yml <<'YAML'
 name: Generate and Publish Space Weather Report
 
 on:
   workflow_dispatch:
-
   schedule:
-    # Run every 6 hours.
     - cron: "0 */6 * * *"
 
 permissions:
-  contents* read
+  contents: read
   pages: write
-  id-token: w*ite
+  id-token: write
 
 concurrency:
-  group: github-*ages
+  group: github-pages
   cancel-in-progress: true
 
-j*bs:
+jobs:
   generate-report:
-    name: G*nerate report
-    runs-on: ubuntu-*4.04
+    name: Generate report
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
 
-    *teps:
-      - name: Create output *irectory
-        run: mkdir -p "$G*THUB_WORKSPACE/output"
+    steps:
+      - name: Create output directory
+        run: mkdir -p "$GITHUB_WORKSPACE/output"
 
-      - na*e: Pull Solar Mission Control imag*
-        run: docker pull zixc1/so*ar-mission-control:latest
+      - name: Pull Solar Mission Control image
+        run: docker pull zixc1/solar-mission-control:latest
 
-      -*name: Generate full report
-       *env:
-          NASA_API_KEY: ${{ s*crets.NASA_API_KEY }}
-        run:*|
-          docker run --rm \
-    *       --user "$(id -u):$(id -g)" *
-            --env NASA_API_KEY \
-*           --env HOME=/tmp \
-     *      --env MPLCONFIGDIR=/tmp/matp*otlib \
-            --volume "$GIT*UB_WORKSPACE/output:/output" \
-   *        zixc1/solar-mission-contro*:latest \
-            --output-dir*/output
-
-      - name: Verify gene*ated report
+      - name: Generate full report
+        env:
+          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
         run: |
-       *  echo "Generated report contents:*
-          find "$GITHUB_WORKSPACE*output" \
-            -maxdepth 3 *
-            -type f \
-            -print \
-            | sort
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --env NASA_API_KEY \
+            --env HOME=/tmp \
+            --env MPLCONFIGDIR=/tmp/matplotlib \
+            --volume "$GITHUB_WORKSPACE/output:/output" \
+            zixc1/solar-mission-control:latest \
+            --output-dir /output
 
+      - name: Verify generated report
+        run: |
+          echo "Generated report contents:"
+          find "$GITHUB_WORKSPACE/output" -maxdepth 3 -type f -print | sort
           test -s "$GITHUB_WORKSPACE/output/space_weather_report.html"
           test -s "$GITHUB_WORKSPACE/output/space_weather_report.txt"
 
       - name: Prepare website
         run: |
-          cp \
-            "$GITHUB_WORKSPACE/output/space_weather_report.html" \
-            "$GITHUB_WORKSPACE/output/index.html"
-
+          cp "$GITHUB_WORKSPACE/output/space_weather_report.html" \
+             "$GITHUB_WORKSPACE/output/index.html"
           touch "$GITHUB_WORKSPACE/output/.nojekyll"
-
-          echo "Website contents:"
-          find "$GITHUB_WORKSPACE/output" \
-            -maxdepth 3 \
-            -type f \
-            -print \
-            | sort
+          find "$GITHUB_WORKSPACE/output" -maxdepth 3 -type f -print | sort
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
@@ -103,3 +91,4 @@ j*bs:
       - name: Deploy website
         id: deployment
         uses: actions/deploy-pages@v4
+YAML
