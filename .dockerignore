@@ -1,0 +1,17 @@
+.git
+.github
+__pycache__
+*.pyc
+*.pyo
+*.log
+*.tar
+*.tar.gz
+*.tgz
+.env
+.env.*
+venv
+.venv
+swrl_report
+dist
+build
+

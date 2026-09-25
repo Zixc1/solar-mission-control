@@ -1,0 +1,30 @@
+
+# Python virtual environments
+.venv/
+.venv-pyenv-backup/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Generated reports
+swrl_report/
+output/
+
+# Logs and archives
+*.log
+*.tar
+*.tar.gz
+*.tgz*
+# Editor files
+.vscode/
+.idea/
+``*
