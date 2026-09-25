@@ -72,6 +72,7 @@ import sys
 import math
 import base64
 import mimetypes
+from email.utils import parsedate_to_datetime
 
 # Optional imports with fallbacks
 try:
@@ -124,7 +125,7 @@ warnings.filterwarnings('ignore')
 # CONFIGURATION
 # ============================================================================
 
-VERSION = "2.3.0"
+VERSION = "2.3.1"
 NASA_API_KEY = os.getenv("NASA_API_KEY", "DEMO_KEY")  # Replace with your NASA API key for higher rate limits
 
 # API Endpoints
@@ -596,29 +597,68 @@ class SpaceWeatherAPI:
         # constant.
         self.active_sw_source = "Unknown"
 
-    def _get(self, url: str, params: Dict = None, cache_minutes: int = 5) -> Optional[Any]:
-        """Make a GET request with caching and error handling"""
-        cache_key = f"{url}:{json.dumps(params or {}, sort_keys=True)}"
+    def _get(self, url: str, params: Dict = None, cache_minutes: int = 5,
+             retries: int = 3) -> Optional[Any]:
+        """Make a cached GET request with retries and secret-safe errors."""
+        params = dict(params or {})
+        cache_key = f"{url}:{json.dumps(params, sort_keys=True)}"
 
         if cache_key in self._cache:
             if datetime.now() < self._cache_expiry.get(cache_key, datetime.min):
                 return self._cache[cache_key]
 
-        try:
-            response = self.session.get(url, params=params, timeout=self.timeout)
-            response.raise_for_status()
-            data = response.json()
+        safe_params = dict(params)
+        if 'api_key' in safe_params:
+            safe_params['api_key'] = '[REDACTED]'
+        safe_target = requests.Request('GET', url, params=safe_params).prepare().url
 
-            self._cache[cache_key] = data
-            self._cache_expiry[cache_key] = datetime.now() + timedelta(minutes=cache_minutes)
+        for attempt in range(retries + 1):
+            try:
+                response = self.session.get(url, params=params, timeout=self.timeout)
+                if response.status_code == 429 or 500 <= response.status_code < 600:
+                    if attempt >= retries:
+                        response.raise_for_status()
+                    retry_after = response.headers.get('Retry-After', '').strip()
+                    delay = min(60.0, 2.0 ** attempt)
+                    if retry_after:
+                        try:
+                            delay = min(120.0, max(0.0, float(retry_after)))
+                        except ValueError:
+                            try:
+                                retry_at = parsedate_to_datetime(retry_after)
+                                if retry_at.tzinfo is None:
+                                    retry_at = retry_at.replace(tzinfo=timezone.utc)
+                                delay = min(120.0, max(
+                                    0.0,
+                                    (retry_at - datetime.now(timezone.utc)).total_seconds()
+                                ))
+                            except (TypeError, ValueError, OverflowError):
+                                pass
+                    print(f"API temporarily unavailable ({response.status_code}); "
+                          f"retrying in {delay:.0f}s...")
+                    time.sleep(delay)
+                    continue
 
-            return data
-        except requests.exceptions.RequestException as e:
-            print(f"API Error ({url}): {e}")
-            return None
-        except json.JSONDecodeError as e:
-            print(f"JSON Parse Error ({url}): {e}")
-            return None
+                response.raise_for_status()
+                data = response.json()
+                self._cache[cache_key] = data
+                self._cache_expiry[cache_key] = (
+                    datetime.now() + timedelta(minutes=cache_minutes)
+                )
+                return data
+            except requests.exceptions.RequestException as exc:
+                if attempt < retries:
+                    delay = min(30.0, 2.0 ** attempt)
+                    print(f"API request failed; retrying in {delay:.0f}s: "
+                          f"{type(exc).__name__}")
+                    time.sleep(delay)
+                    continue
+                print(f"API Error ({safe_target}): {type(exc).__name__}: {exc}")
+                return None
+            except ValueError as exc:
+                print(f"JSON Parse Error ({safe_target}): {exc}")
+                return None
+        return None
 
     # here is the modification of the API client: NEW binary fetcher.
     # _get() calls response.json() unconditionally, so it cannot be used
@@ -784,27 +824,31 @@ class SpaceWeatherAPI:
         return results
 
     def get_kp_forecast(self) -> List[Dict]:
-        """Fetch Kp index forecast"""
+        """Fetch current Kp forecasts and discard stale rows."""
         data = self._get(ENDPOINTS['swpc_kp_forecast'])
-
-        # here is the modification of get_kp_forecast: same format change
-        # as get_kp_index above. This one had not crashed yet only because
-        # execution died on the Kp product first.
         rows = normalise_swpc_product(data)
         if not rows:
             return []
 
+        now = datetime.now(timezone.utc)
+        earliest = now - timedelta(hours=3)
+        latest = now + timedelta(days=4)
         results = []
         for row in rows:
             time_tag = get_key(row, 'time_tag')
-            if not time_tag:
+            stamp = parse_swpc_time(time_tag)
+            if stamp is None or stamp < earliest or stamp > latest:
                 continue
             results.append({
                 'time_tag': time_tag,
                 'kp': as_float(get_key(row, 'kp', 'Kp', 'kp_index')),
-                'observed': get_key(row, 'observed', default='predicted')
+                'observed': get_key(row, 'observed', default='predicted'),
+                '_timestamp': stamp,
             })
 
+        results.sort(key=lambda item: item['_timestamp'])
+        for item in results:
+            item.pop('_timestamp', None)
         return results
 
     def get_alerts(self) -> List[Dict]:
@@ -2026,8 +2070,7 @@ class SpaceWeatherAggregator:
 # matters operationally: how long the field has been southward, whether
 # the flux is rising or decaying, whether a Kp peak is a spike or a
 # sustained storm. This class draws the underlying time series and
-# collects the current full disc imagery, then packs both into aBest ai model in alpaca list
-# self-contained HTML report.
+# collects the current full disc imagery, then packs both into a self-contained HTML report.
 #
 # Design rules used throughout:
 #   * Every axis carries units, every threshold carries its NOAA scale
@@ -2865,10 +2908,16 @@ footer a{color:var(--primary)}
         )
 
         path = os.path.join(self.output_dir, 'space_weather_report.html')
+        index_path = os.path.join(self.output_dir, 'index.html')
         try:
-            with open(path, 'w', encoding='utf-8') as handle:
-                handle.write(html)
+            for destination in (path, index_path):
+                with open(destination, 'w', encoding='utf-8') as handle:
+                    handle.write(html)
+            with open(os.path.join(self.output_dir, '.nojekyll'),
+                      'w', encoding='utf-8'):
+                pass
             print(f"  HTML report written: {path}")
+            print(f"  Website entry point written: {index_path}")
             return path
         except OSError as e:
             print(f"  Could not write HTML report: {e}")
