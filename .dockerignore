@@ -1,5 +1,7 @@
 .git
 .github
+.venv
+.venv-pyenv-backup
 __pycache__
 *.pyc
 *.pyo
@@ -9,9 +11,7 @@ __pycache__
 *.tgz
 .env
 .env.*
-venv
-.venv
 swrl_report
+output
 dist
 build
-

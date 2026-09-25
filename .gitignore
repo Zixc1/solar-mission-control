@@ -1,3 +1,32 @@
+# Python environments
+.venv/
+.venv-pyenv-backup/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Generated reports
+swrl_report/
+output/
+
+# Archives and logs
+*.log
+*.tar
+*.tar.gz
+*.tgz
+
+# Editors
+.vscode/
+.idea/
 
 # Python virtual environments
 .venv/
@@ -29,3 +58,4 @@ output/
 .idea/
 ``*
 .venv-pyenv-backup/
+.env
