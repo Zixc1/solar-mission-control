@@ -1,4 +1,4 @@
-name: Generate Online Space Weather Report
+name: Generate and Publish Space Weather Report
 
 on:
   workflow_dispatch:
@@ -7,40 +7,35 @@ on:
     - cron: "0 */6 * * *"
 
 permissions:
-  contents: read
+  contents* read
+  pages: write
+  id-token: w*ite
 
-jobs:
+concurrency:
+  group: github-*ages
+  cancel-in-progress: true
+
+j*bs:
   generate-report:
-    runs-on: ubuntu-latest
+    runs-on* ubuntu-24.04
 
     steps:
-      - name: Create output directory
-        run: mkdir -p output
+      - *ame: Create output directory
+     *  run: mkdir -p output
 
-      - name: Pull Solar Mission Control image
-        run: docker pull zixc1/solar-mission-control:latest
+      - na*e: Pull Solar Mission Control imag*
+        run: docker pull zixc1/so*ar-mission-control:latest
 
-      - name: Generate full report
-        env:
-          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
-        run: |
+      -*name: Generate full report
+       *env:
+          NASA_API_KEY: ${{ s*crets.NASA_API_KEY }}
+        run:*|
           docker run --rm \
-            --user "$(id -u):$(id -g)" \
+    *       --user "$(id -u):$(id -g)" *
             --env NASA_API_KEY \
-            --env HOME=/tmp \
-            --env MPLCONFIGDIR=/tmp/matplotlib \
-            -v "$PWD/output:/app/swrl_report" \
-            zixc1/solar-mission-control:latest
+*           --env HOME=/tmp \
+     *      --env MPLCONFIGDIR=/tmp/matp*otlib \
+            -v "$PWD/outpu*:/app/swrl_report" \
+            z*xc1/solar-mission-control:latest
 
-      - name: Verify generated files
-        run: |
-          echo "Generated report files:"
-          find output -maxdepth 3 -type f | sort
-
-      - name: Upload complete report
-        uses: actions/upload-artifact@v4
-        with:
-          name: space-weather-report
-          path: output/
-          if-no-files-found: error
-          retention-days: 14
+*
