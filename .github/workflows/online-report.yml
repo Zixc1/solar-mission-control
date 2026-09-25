@@ -1,0 +1,46 @@
+name: Generate Online Space Weather Report
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "0 */6 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  generate-report:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Create output directory
+        run: mkdir -p output
+
+      - name: Pull Solar Mission Control image
+        run: docker pull zixc1/solar-mission-control:latest
+
+      - name: Generate full report
+        env:
+          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+        run: |
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --env NASA_API_KEY \
+            --env HOME=/tmp \
+            --env MPLCONFIGDIR=/tmp/matplotlib \
+            -v "$PWD/output:/app/swrl_report" \
+            zixc1/solar-mission-control:latest
+
+      - name: Verify generated files
+        run: |
+          echo "Generated report files:"
+          find output -maxdepth 3 -type f | sort
+
+      - name: Upload complete report
+        uses: actions/upload-artifact@v4
+        with:
+          name: space-weather-report
+          path: output/
+          if-no-files-found: error
+          retention-days: 14
