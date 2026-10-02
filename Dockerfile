@@ -16,7 +16,7 @@ COPY requirements.txt ./
 RUN python -m pip install --no-cache-dir --upgrade pip \
     && python -m pip install --no-cache-dir -r requirements.txt
 
-COPY solar_mission_control_v3_0_8_standalone.py ./
+COPY solar_mission_control_v3_2_0_targeted_fixes.py ./
 
 RUN useradd --create-home --uid 10001 appuser \
     && mkdir -p /app/swrl_report \
@@ -24,4 +24,4 @@ RUN useradd --create-home --uid 10001 appuser \
 
 USER appuser
 
-ENTRYPOINT ["python", "solar_mission_control_v3_0_8_standalone.py"]
+ENTRYPOINT ["python", "solar_mission_control_v3_2_0_targeted_fixes.py"]
