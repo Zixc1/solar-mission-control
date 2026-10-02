@@ -15,3 +15,12 @@ swrl_report
 output
 dist
 build
+
+# Local archives and development files
+__pycache__/
+.venv/
+.venv-pyenv-backup/
+.git/
+output/
+swrl_report/
+docs/

@@ -8,70 +8,30 @@ env/
 __pycache__/
 *.py[cod]
 *.pyo
-
 # Secrets
 .env
 .env.*
 !.env.example
-
 # Generated reports
 swrl_report/
 output/
-
 # Archives and logs
 *.log
 *.tar
 *.tar.gz
 *.tgz
-
 # Editors
 .vscode/
 .idea/
-
 # Python virtual environments
-.venv/
-.venv-pyenv-backup/
-venv/
-env/
-
-# Python cache
-__pycache__/
-*.py[cod]
-*.pyo
-
 # Environment variables and secrets
-.env
-.env.*
-!.env.example
-
-# Generated reports
-swrl_report/
-output/
-
 # Logs and archives
-*.log
-*.tar
-*.tar.gz
 *.tgz*
 # Editor files
-.vscode/
-.idea/
 ``*
-.venv-pyenv-backup/
-.env
-
 # Local archives
-*.tar
-*.tar.gz
-
-# Secrets
 *env
-
 # Python
-__pycache__/
 *.pyc
 .*env/
-.venv-pyenv-backup/
-
 # Tempor*ry generated output
-output/
