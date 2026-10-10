@@ -1,6 +1,28 @@
-requests
-numpy
-matplotlib
-astropy
-sunpy[all]
-plotly
+# ============================================================================
+# Solar Mission Control v4.1.5 - complete requirements
+# Python >= 3.12 recommended; 3.10 minimum (PySPEDAS)
+# ============================================================================
+
+# --- Core (script imports directly, no fallback) ---
+requests>=2.31.0
+
+# --- Numeric / scientific (guarded by HAS_* flags, but required for full run) ---
+numpy>=1.26.0,<2.0.0
+matplotlib>=3.8.0
+Pillow>=10.0.0
+astropy>=6.0.0
+
+# --- Solar physics: Fido/VSO acquisition for AIA, HMI, LASCO, HEK ---
+# [net] pulls bs4, drms, zeep, pyvo, parfive, tqdm, python-dateutil
+# [map] pulls scipy, scikit-image
+sunpy[net,map]>=6.0.0
+
+# --- Heliophysics: Parker Solar Probe FIELDS / SWEAP / ISoIS / WISPR ---
+# Transitives pulled in automatically: cdflib, pytplot (or pytplot-mpl-temp),
+# pandas, xarray, h5py, netCDF4, PyWavelets
+pyspedas>=1.7.0
+
+# --- Optional outputs ---
+# Drop if you always run with --no-interactive / --no-pdf
+plotly>=5.18.0
+reportlab>=4.0.0
