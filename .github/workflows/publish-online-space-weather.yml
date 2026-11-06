@@ -1,30 +1,234 @@
-- name: Generate Solar Mission Control website
-  env:
-    NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
-    JSOC_EMAIL: ${{ secrets.JSOC_EMAIL }}
-    SMC_IMAGE: zixc1/solar-mission-control:5.5.2
-  run: |
-    set -euo pipefail
+name: Publish Online Space Weather Website
 
-    rm -rf website
-    mkdir -p website
+on:
+  workflow_dispatch:
+    inputs:
+      image:
+        description: Docker image tag or digest to publish
+        required: false
+        default: zixc1/solar-mission-control:5.5.2
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/publish-online-space-weather.yml"
+  schedule:
+    - cron: "*/30 * * * *"
 
-    docker run --rm \
-      --user "$(id -u):$(id -g)" \
-      --env NASA_API_KEY \
-      --env JSOC_EMAIL \
-      --env HOME=/tmp/home \
-      --env MPLCONFIGDIR=/tmp/matplotlib \
-      --env XDG_CACHE_HOME=/tmp/xdg-cache \
-      --env XDG_CONFIG_HOME=/tmp/xdg-config \
-      --env ASTROPY_CONFIG_DIR=/tmp/astropy-config \
-      --env ASTROPY_CACHE_DIR=/tmp/astropy-cache \
-      --env MPLBACKEND=Agg \
-      --mount type=bind,src="$PWD/website",dst=/app/swrl_report \
-      "$SMC_IMAGE" \
-      run \
-      --output-dir /app/swrl_report \
-      --hours-back 72 \
-      --hours-forward 48 \
-      --pdf \
-      --no-psp
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+env:
+  DEFAULT_SMC_IMAGE: zixc1/solar-mission-control:5.5.2
+  RAW_OUTPUT: website
+  SITE_DIR: _site
+  CACHE_DIR: .container-cache
+  REPORT_DOWNLOAD_FILE: solar_mission_control_report.pdf
+  REPORT_DOWNLOAD_FORM_ENDPOINT: https://formspree.io/f/mqpebbqq
+
+jobs:
+  generate-report:
+    name: Test image and generate website
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Select Docker image
+        id: image
+        shell: bash
+        run: |
+          set -euo pipefail
+          IMAGE="${{ github.event.inputs.image }}"
+          if [ -z "$IMAGE" ]; then
+            IMAGE="$DEFAULT_SMC_IMAGE"
+          fi
+          case "$IMAGE" in
+            zixc1/solar-mission-control:*|zixc1/solar-mission-control@sha256:*) ;;
+            *)
+              echo "::error::Only zixc1/solar-mission-control tags or digests are allowed."
+              exit 1
+              ;;
+          esac
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "Publishing Docker image: $IMAGE"
+
+      - name: Validate required secrets
+        env:
+          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+          JSOC_EMAIL: ${{ secrets.JSOC_EMAIL }}
+        run: |
+          set -euo pipefail
+          if [ -z "$NASA_API_KEY" ]; then
+            echo "::error::Create the repository secret NASA_API_KEY before publishing."
+            exit 1
+          fi
+          if [ -z "$JSOC_EMAIL" ]; then
+            echo "::error::Create the repository secret JSOC_EMAIL before publishing."
+            exit 1
+          fi
+
+      - name: Create writable output and cache directories
+        run: |
+          set -euo pipefail
+          rm -rf "$RAW_OUTPUT" "$SITE_DIR" "$CACHE_DIR"
+          mkdir -p "$RAW_OUTPUT" "$SITE_DIR"
+          mkdir -p "$CACHE_DIR/home"
+          mkdir -p "$CACHE_DIR/matplotlib"
+          mkdir -p "$CACHE_DIR/xdg-cache"
+          mkdir -p "$CACHE_DIR/xdg-config"
+          mkdir -p "$CACHE_DIR/astropy-config"
+          mkdir -p "$CACHE_DIR/astropy-cache"
+
+      - name: Pull pinned Docker image
+        run: |
+          set -euo pipefail
+          docker pull "${{ steps.image.outputs.image }}"
+          docker image inspect "${{ steps.image.outputs.image }}" \
+            --format 'Image ID: {{.Id}} | Created: {{.Created}}'
+
+      - name: Run Docker image regression suite
+        env:
+          SMC_IMAGE: ${{ steps.image.outputs.image }}
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --env HOME=/cache/home \
+            --env MPLCONFIGDIR=/cache/matplotlib \
+            --env XDG_CACHE_HOME=/cache/xdg-cache \
+            --env XDG_CONFIG_HOME=/cache/xdg-config \
+            --env ASTROPY_CONFIG_DIR=/cache/astropy-config \
+            --env ASTROPY_CACHE_DIR=/cache/astropy-cache \
+            --env MPLBACKEND=Agg \
+            --mount type=bind,src="$PWD/$CACHE_DIR",dst=/cache \
+            "$SMC_IMAGE" test | tee regression-results.txt
+          grep -Eq '"all_passed"[[:space:]]*:[[:space:]]*true' regression-results.txt
+
+      - name: Generate current HTML, JSON, figures, and PDF
+        env:
+          SMC_IMAGE: ${{ steps.image.outputs.image }}
+          NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+          JSOC_EMAIL: ${{ secrets.JSOC_EMAIL }}
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --env NASA_API_KEY \
+            --env JSOC_EMAIL \
+            --env REPORT_DOWNLOAD_FORM_ENDPOINT \
+            --env REPORT_DOWNLOAD_FILE \
+            --env HOME=/cache/home \
+            --env MPLCONFIGDIR=/cache/matplotlib \
+            --env XDG_CACHE_HOME=/cache/xdg-cache \
+            --env XDG_CONFIG_HOME=/cache/xdg-config \
+            --env ASTROPY_CONFIG_DIR=/cache/astropy-config \
+            --env ASTROPY_CACHE_DIR=/cache/astropy-cache \
+            --env MPLBACKEND=Agg \
+            --mount type=bind,src="$PWD/$CACHE_DIR",dst=/cache \
+            --mount type=bind,src="$PWD/$RAW_OUTPUT",dst=/app/swrl_report \
+            "$SMC_IMAGE" \
+            run \
+            --output-dir /app/swrl_report \
+            --hours-back 72 \
+            --hours-forward 48 \
+            --pdf \
+            --no-psp
+
+      - name: Verify report and correct PDF download target
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          output = Path("website")
+          html_path = output / "space_weather_report.html"
+          pdf_path = output / "solar_mission_control_report.pdf"
+          snapshot_path = output / "report_snapshot.json"
+          required = (html_path, pdf_path, snapshot_path)
+          missing = [str(path) for path in required if not path.is_file() or path.stat().st_size == 0]
+          if missing:
+              raise SystemExit("Missing or empty required artifacts: " + ", ".join(missing))
+
+          html = html_path.read_text(encoding="utf-8")
+          html, replacements = re.subn(
+              r'data-report-file="[^"]*"',
+              'data-report-file="solar_mission_control_report.pdf"',
+              html,
+              count=1,
+          )
+          if replacements != 1:
+              raise SystemExit("Could not locate data-report-file in generated HTML")
+          endpoint = "https://formspree.io/f/mqpebbqq"
+          if endpoint not in html:
+              raise SystemExit("Expected Formspree endpoint is absent from generated HTML")
+          html_path.write_text(html, encoding="utf-8")
+          print("Verified HTML, PDF, JSON snapshot, and Formspree configuration.")
+          PY
+
+      - name: Prepare safe public website
+        run: |
+          set -euo pipefail
+          rsync -a --delete \
+            --exclude='*.db' \
+            --exclude='*.db-*' \
+            --exclude='*.sqlite' \
+            --exclude='*.sqlite3' \
+            --exclude='parquet/' \
+            --exclude='fits/' \
+            --exclude='*.fits' \
+            --exclude='*.fit' \
+            "$RAW_OUTPUT/" "$SITE_DIR/"
+          cp "$SITE_DIR/space_weather_report.html" "$SITE_DIR/index.html"
+          touch "$SITE_DIR/.nojekyll"
+          test -s "$SITE_DIR/index.html"
+          test -s "$SITE_DIR/solar_mission_control_report.pdf"
+          test -s "$SITE_DIR/report_snapshot.json"
+          if find "$SITE_DIR" -type f \( \
+              -name '*.db' -o -name '*.db-*' -o \
+              -name '*.sqlite' -o -name '*.sqlite3' -o \
+              -name '*.fits' -o -name '*.fit' \
+            \) -print -quit | grep -q .; then
+            echo "::error::A private database or raw FITS artifact entered the Pages directory."
+            exit 1
+          fi
+          find "$SITE_DIR" -maxdepth 3 -type f -printf '%P\n' | sort
+          du -sh "$SITE_DIR"
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload GitHub Pages website
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ${{ env.SITE_DIR }}
+
+      - name: Upload regression log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: solar-mission-control-regression-results
+          path: regression-results.txt
+          if-no-files-found: ignore
+          retention-days: 14
+
+  deploy:
+    name: Publish website
+    needs: generate-report
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy GitHub Pages website
+        id: deployment
+        uses: actions/deploy-pages@v4
