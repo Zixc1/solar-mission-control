@@ -9,10 +9,12 @@ on:
         default: zixc1/solar-mission-control:5.5.2
   push:
     branches: [main]
-    paths:
-      - ".github/workflows/publish-online-space-weather.yml"
   schedule:
     - cron: "*/30 * * * *"
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: true
 
 permissions:
   contents: read
