@@ -12,6 +12,11 @@ on:
   schedule:
     - cron: "*/30 * * * *"
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 concurrency:
   group: github-pages
   cancel-in-progress: true
