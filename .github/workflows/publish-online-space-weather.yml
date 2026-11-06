@@ -1,0 +1,30 @@
+- name: Generate Solar Mission Control website
+  env:
+    NASA_API_KEY: ${{ secrets.NASA_API_KEY }}
+    JSOC_EMAIL: ${{ secrets.JSOC_EMAIL }}
+    SMC_IMAGE: zixc1/solar-mission-control:5.5.2
+  run: |
+    set -euo pipefail
+
+    rm -rf website
+    mkdir -p website
+
+    docker run --rm \
+      --user "$(id -u):$(id -g)" \
+      --env NASA_API_KEY \
+      --env JSOC_EMAIL \
+      --env HOME=/tmp/home \
+      --env MPLCONFIGDIR=/tmp/matplotlib \
+      --env XDG_CACHE_HOME=/tmp/xdg-cache \
+      --env XDG_CONFIG_HOME=/tmp/xdg-config \
+      --env ASTROPY_CONFIG_DIR=/tmp/astropy-config \
+      --env ASTROPY_CACHE_DIR=/tmp/astropy-cache \
+      --env MPLBACKEND=Agg \
+      --mount type=bind,src="$PWD/website",dst=/app/swrl_report \
+      "$SMC_IMAGE" \
+      run \
+      --output-dir /app/swrl_report \
+      --hours-back 72 \
+      --hours-forward 48 \
+      --pdf \
+      --no-psp

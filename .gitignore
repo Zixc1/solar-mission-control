@@ -1,80 +1,40 @@
-# Python environments
-.venv/
-.venv-pyenv-backup/
-venv/
-env/
-
-# Python cache
-__pycache__/
-*.py[cod]
-*.pyo
-
 # Secrets
 .env
 .env.*
 !.env.example
-
-# Generated reports
-swrl_report/
-output/
-
-# Archives and logs
-*.log
-*.tar
-*.tar.gz
-*.tgz
-
-# Editors
-.vscode/
-.idea/
-
-# Python virtual environments
-.venv/
-.venv-pyenv-backup/
-venv/
-env/
-
-# Python cache
-__pycache__/
-*.py[cod]
-*.pyo
-
-# Environment variables and secrets
-.env
-.env.*
-!.env.example
-
-# Generated reports
-swrl_report/
-output/
-
-# Logs and archives
-*.log
-*.tar
-*.tar.gz
-*.tgz*
-# Editor files
-.vscode/
-.idea/
-``*
-.venv-pyenv-backup/
-.env
-
-# Local archives
-*.tar
-*.tar.gz
-
-# Secrets
-*env
 
 # Python
 __pycache__/
-*.pyc
-.*env/
+.pytest_cache/
+.venv/
 .venv-pyenv-backup/
+venv/
+env/
 
-# Tempor*ry generated output
-output/
+# Python generated files
+.pyc
+.pyo
+
+# Local archives and logs
+.log
+.tar
+.tar.gz
+.tgz
+
+# Local backups
 requirements_previous.txt
-docker-build-*.log
 requirements.txt.damaged
+solar_mission_control_previous.py
+
+# Generated output
+output/
+swrl_report/
+docker-output/
+website/
+
+# Container caches
+.container-cache/
+
+# Editor files
+.vscode/
+.idea/
