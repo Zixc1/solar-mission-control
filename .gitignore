@@ -75,3 +75,6 @@ __pycache__/
 
 # Tempor*ry generated output
 output/
+requirements_previous.txt
+docker-build-*.log
+requirements.txt.damaged

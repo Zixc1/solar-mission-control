@@ -9,9 +9,145 @@ Original file is located at
 
 """
 Solar Mission Control - Comprehensive Space Weather Monitoring System
-Version: 4.1.5
-Fetches data from NOAA SWPC, NASA DONKI, GOES, and the RTSW L1 fleet
+Version: 5.5.2
+Author: Ahmed.A.E
+Contact: ahmed.abdo@science.tanta.edu.eg
+Copyright (c) 2026 Ahmed.A.E. All rights reserved.
+
+This source code is proprietary unless a separate LICENSE file explicitly grants
+additional permissions. You may view and evaluate the code, but copying,
+redistribution, modification, or commercial reuse requires prior written
+permission from the author.
+Fetches data from NOAA SWPC, NASA DONKI, GOES, STEREO-A, and the RTSW L1 fleet
 (SOLAR-1 / IMAP / DSCOVR / ACE, whichever SWPC has marked active).
+
+CHANGE LOG for 5.5.2 - HTTP security hardening
+  * Bind the live server to loopback by default.
+  * Require SMC_API_TOKEN before any non-loopback bind and protect sensitive routes.
+  * Remove wildcard CORS; allow only an explicitly configured SMC_CORS_ORIGIN.
+  * Log unexpected HTTP failures and return a controlled 500 response.
+  * Add CSP, permissions policy, and no-store headers for sensitive responses.
+CHANGE LOG for 5.5.1 - integration audit and operational naming consistency
+  * Standardize the advisory monitor name as OperationalNowcastSkillMonitor.
+  * Verify single CME uncertainty definitions and all live global references.
+  * Preserve real BMR/hybrid/persistence members; do not use fake perturbations.
+CHANGE LOG for 5.5.0 - operational validation, ensemble, dashboard, CME uncertainty
+  * Add advisory nowcast skill monitoring against verified persistence skill.
+  * Add real-member BMR/hybrid/persistence ensemble and spread intervals.
+  * Add /api/verification/dashboard HTML endpoint with escaped output.
+  * Add CME arrival-time uncertainty distribution with corrected km/s units.
+CHANGE LOG for 5.4.1 - newest PSP archive date discovery
+  * Discover the newest available public date independently for each PSP product.
+  * Use bounded expanding and binary probes; configured lag is now a fallback.
+  * Prevent EPI-Hi, FIELDS, and SWEAP from sharing one product's archive lag.
+CHANGE LOG for 5.4.0 - private-environment hardening and DONKI completeness
+
+  * Preserve runtime warnings instead of globally suppressing diagnostics.
+  * Keep PySPEDAS primary and use CDAWeb only as a verified PSP fallback.
+  * Add the SPAN-E L2 datatype as a final compatibility candidate.
+  * Persist standalone CMEAnalysis records through the DONKI event archive.
+  * Distinguish AVAILABLE, DEGRADED, and UNAVAILABLE DONKI endpoint health.
+  * Include CME analyses in DONKI quality counts and retention behavior.
+  * Exercise CMEAnalysis persistence in the embedded regression suite.
+  * Surface DEGRADED explicitly in data-quality and dashboard status.
+  * Prefetch CMEAnalysis asynchronously and remove obsolete imports.
+  * Preserve all v5.3.3 diagnostics, reports, routes, and risk calculations.
+
+CHANGE LOG for 5.3.3 - architecture and reliability cleanup
+
+  * Decouple JSON serialization from ReportSnapshot and TelemetryStore.
+  * Make SolarMissionControl the sole writable snapshot owner.
+  * Initialize alert state and centralize finite-number and CLI helpers.
+  * Preserve v5.3.2 science, schemas, routes, reports, and risk behavior.
+
+CHANGE LOG for 5.3.2 - clean diagnostic report integration
+
+  * Surface v5.3 diagnostics and conformal intervals in report artifacts.
+  * Add inter-source ranges for sensitivity scaling and Kp activity context.
+  * Add report provenance and defensive formatting without changing risk weights.
+
+CHANGE LOG for 5.3.1 - aligned three-way Kp verification
+
+  * Verify SMC, NOAA SWPC, and issuance-time persistence on identical UTC
+    3-hour planetary-Kp target intervals.
+  * Enforce availability-time ordering and common-target intersection to prevent
+    look-ahead leakage and unequal-sample comparisons.
+  * Publish method-level MAE, RMSE, bias, correlation, storm-event scores,
+    bootstrap skill confidence intervals, pairwise winners, REST, and metrics.
+
+CHANGE LOG for 5.3.0 - Tier 2 experimental science diagnostics
+
+  * Add guarded ROC and multi-level split-conformal reliability diagnostics.
+  * Add deterministic L1-spread-aware input sensitivity analysis, kept separate
+    from residual conformal uncertainty.
+  * Add Boyle polar-cap potential, Akasofu epsilon, and normalized FAC screening
+    diagnostics with explicit applicability limits.
+  * Add observed L1 discontinuity characterization using magnetic coplanarity
+    with degeneracy flags; no unsupported pre-L1 Bz-sign prediction.
+  * Archive already-fetched NOAA SWPC Kp forecasts without additional requests.
+  * Keep all new science products experimental and outside operational risk weights.
+
+CHANGE LOG for 5.2.0 - forecast verification and model governance
+  * Preserve screening and conformal intervals separately in the archive.
+  * Reject missing/non-finite Dst and Kp observations instead of coercing to zero.
+  * Select only an existing current report artifact for dashboard downloads.
+  * Harden HTTP retry injection, isolate nowcast/consensus/archive/verification failures.
+  * Deduplicate hourly Dst verification targets and remove SQLite timestamp math.
+  * Enforce strict temporal separation for split-conformal evaluation.
+  * Publish experimental conformal bounds alongside unchanged screening ranges.
+
+  * Archive every issued nowcast immutably with model and interval metadata.
+  * Verify forecasts against nearest-time Dst observations with explicit tolerance.
+  * Add chronological calibration/evaluation separation for experimental
+    split-conformal Dst intervals without look-ahead leakage.
+  * Add robust quality-weighted L1 consensus diagnostics as a parallel product.
+  * Add verification and consensus REST endpoints, Prometheus metrics, and
+    change-aware nowcast_degradation SSE events.
+
+CHANGE LOG for 5.1.0 - observability, delivery resilience, and release verification
+
+  * Add Prometheus /metrics plus operational /health and /ready endpoints.
+  * Add change-aware named SSE events, event IDs, and a bounded replay buffer
+    with Last-Event-ID reconnection support.
+  * Add transient-only webhook retries, secret-redacted SQLite alert history,
+    durable dead-letter recording, and the /api/alerts/history endpoint.
+  * Normalize NumPy, Astropy, and SunPy metadata for strict JSON snapshots.
+  * Add real Astropy, SunPy, and PySPEDAS deterministic integration tests.
+  * Add source-aware L1 despiking and nullable-telemetry handling.
+  * Mark STEREO-A beacon telemetry as UNCONFIGURED when verified endpoints are
+    not supplied; geometry-only CME screening remains available.
+  * Label nowcast ranges as empirical screening ranges, not calibrated
+    prediction intervals.
+
+CHANGE LOG for 5.0.0 - enterprise operations, nowcasting, and live server
+
+  * Add L1FleetValidator for multi-spacecraft cross-validation (SOLAR-1, IMAP,
+    DSCOVR, ACE), Z-score divergence detection, and running Hampel despiking.
+  * Add MultiChannelAlertDispatcher for Discord, Slack Block Kit, Telegram
+    MarkdownV2 (with SEVERE/EXTREME mute-bypass), and PagerDuty Events v2.
+  * Add GeomagneticNowcaster combining online L2-regularized autoregressive
+    Ridge regression on SQLite history with Burton-McPherron-Russell ring-current
+    physics, Shue magnetopause standoff distance, and SSC shock detection.
+  * Add StereoABeaconClient for optional configured STEREO-A beacon telemetry,
+    COR2/EUVI quicklooks, and approximate geometry-based CME speed correction.
+  * Add MissionControlHTTPServer with zero-dependency asyncio HTTP, REST
+    /api/telemetry and /api/nowcast endpoints, and live SSE (/events) streaming.
+
+CHANGE LOG for 4.2.0-dev2 - snapshot completion and model configuration
+
+  * Pass ReportSnapshot directly into HTML generation and alert delivery.
+  * Add a canonical plate registry shared by JSON, text, HTML, and PDF metadata.
+  * Move PSP plot statistics out of aggregator-owned context dictionaries.
+  * Add validated JSON risk-model configuration through --risk-config.
+  * Republish the atomic JSON snapshot after visual plate registration.
+
+CHANGE LOG for 4.2.0-dev1 - reproducible report foundation
+
+  * Add one immutable ReportSnapshot per run as the authoritative output context.
+  * Add atomic, schema-versioned JSON snapshot output for automation and replay.
+  * Reuse snapshot conditions, risk, outlook, events, and threats across outputs.
+  * Build alert payloads from the same snapshot used by the report.
+  * Include the four v4.1.6 critical science-path correctness fixes.
 
 CHANGE LOG for 4.1.5 - unattended-operation safety
 
@@ -313,6 +449,7 @@ CHANGE LOG for 3.2.0 - modern web application:
   * Added telemetry ribbon, circular risk gauge, and observatory gallery filters.
   * Added dashboard/history JSON exports, automatic refresh, and PWA support.
   * Added installable offline shell, responsive expert panels, and modernized accessibility.
+
 CHANGE LOG for 3.1.0 - operational web interface:
   * Rebuilt the self-contained HTML report as a responsive operational dashboard.
   * Added sticky navigation, compact live-status header, report-age warnings,
@@ -415,102 +552,48 @@ CHANGE LOG for 2.5.1 - enhanced report refinements:
   * Removed the unrelated Docker upload GUI and CLI flag.
 
 CHANGE LOG for 2.4.4 - SDO/HMI now fetched from SunPy/VSO:
-
   * SDO/HMI line of sight magnetogram and SDO/HMI white light
     continuum are now retrieved as science FITS files via SunPy/Fido
-    over the VSO backend. Previously they were fetched from the JSOC
-    export service (asynchronous, and it required JSOC_EMAIL to be
-    set), so on a machine without that env var the code silently fell
-    back to the operational web JPEGs at
-    sdo.gsfc.nasa.gov/assets/img/latest/latest_1024_HMIB.jpg and
-    latest_1024_HMIIC.jpg. That fallback is now removed for HMI and
-    AIA: if VSO cannot supply the plate, the plate is dropped from
-    the report rather than substituted with a web quicklook.
-  * VSO does not need an email address, so JSOC_EMAIL is no longer
-    consulted anywhere and the _fetch_hmi warning about it is gone.
-  * _save_sunpy_map now accepts a cmap argument. HMI magnetograms use
-    the diverging 'hmimag' blue/red colormap; the continuum uses
-    greyscale. The asymmetric (1, 99.8) percentile clip that is
-    correct for AIA is skipped for the signed magnetogram, because it
-    would saturate the weaker polarity and hide quiet-region flux.
-  * fetch_imagery is restructured so HMI and AIA are handled on the
-    SunPy path only. Operational quicklooks are fetched exclusively
-    for the sources VSO does not carry: SOHO/LASCO C2/C3, OVATION
-    aurora, the SWPC synoptic map.
+    over the VSO backend.
 
 CHANGE LOG for 2.4.3 - merge of 2.4.1 and 2.4.2:
-
-  * estimate_cme_eta(): restored the drag-corrected transit time that
-    2.4.2 replaced with a constant-speed 1 AU / v approximation.
-  * Removed unused imports and dead code: astropy.coordinates.SkyCoord
-    and SpaceWeatherVisualizer._window().
-  * GOES data-quality assessment uses a 72 h window so the
-    completeness denominator matches the 3-day feed that is fetched.
-  * Added the 2.4.1 and 2.4.2 change-log entries that the 2.4.2 header
-    skipped.
+  * estimate_cme_eta(): restored the drag-corrected transit time.
+  * GOES data-quality assessment uses a 72 h window.
 
 CHANGE LOG for 2.4.2 - review fixes to 2.3.0 / 2.4.1:
-
-  * NEW as_bool() helper. The RTSW "active" flag was read with
-    bool(item.get('active', False)), which returns True for the string
-    "false".
-  * Unmatched magnetometer samples in get_rtsw_solar_wind() now carry
-    NaN instead of 0.0.
-  * _get() no longer interpolates str(exc) into its error message,
-    because requests includes the full request URL (and therefore the
-    API key) in that text.
-  * _risk_inputs() returns level = UNKNOWN when every critical feed is
-    empty, instead of reporting a blackout as quiet space weather.
-  * SunPy/HEK flare de-duplication now matches on a 5-minute window.
-  * DONKI queries end at now() rather than now + hours_forward.
-  * GOES and RTSW records are clipped to the requested hours_back
-    window before being plotted or scored.
-  * SolarMissionControl.with_plots is now simply with_plots and
-    HAS_MATPLOTLIB.
+  * NEW as_bool() helper and NaN handling for unmatched magnetometer samples.
 
 CHANGE LOG for 2.4.1 - first review pass:
-
-  * NASA_API_KEY: default no longer falls back to a committed live key;
-    it now uses the public DEMO_KEY.
-  * JSOC email: no longer defaults to a personal address.
-  * _parse_flare_intensity() promoted to a @staticmethod.
-  * --api-key help text matches the real default.
-  * Flux formatting: 0.0 flux no longer renders as "N/A".
-  * plot_overview(): x-axis extended so bar labels at score=100 stay
-    inside the axes.
+  * NASA_API_KEY defaults to DEMO_KEY; promoted _parse_flare_intensity().
 
 CHANGE LOG for 2.3.0 - visual report:
-
-  * NEW SpaceWeatherVisualizer class. Draws the time series the text
-    report could only summarise (GOES X-ray, GOES protons, RTSW solar
-    wind with the Newell coupling function, Kp observed + forecast,
-    Dst, CME speed distribution, risk/flare overview) and pulls the
-    latest full-disc solar imagery (SDO/AIA, HMI, LASCO C2/C3, OVATION
-    aurora, SWPC synoptic map).
-  * NEW HTML report that embeds every figure and image as base64, so
-    the file is self-contained and can be mailed or opened offline.
-    The plain-text report is still produced and is embedded in the HTML.
-  * Figures and images are also written to disk as PNG/JPG, and are
-    displayed inline when the script runs inside a notebook.
-  * New CLI flags: --no-plots, --no-images, --output-dir, --no-html.
+  * NEW SpaceWeatherVisualizer class and self-contained HTML report.
 
 CHANGE LOG for 2.2.0 - all fixes forced by NOAA SWPC Service Change
 Notice 26-21 (issued 2 March 2026):
-
-  * The /products/solar-wind/ and /products/ace/ endpoint trees were
-    DEPRECATED and REMOVED on or about 30 April 2026. Replaced with
-    the /json/rtsw/ endpoints.
-  * kyoto-dst.json, noaa-planetary-k-index.json and
-    noaa-planetary-k-index-forecast.json changed from
-    [header_row, values_row, values_row, ...] to a standard list of
-    JSON objects, on or about 31 March 2026. This is what produced
-    the KeyError: 0 crash.
-
-Every changed block is marked with
-# here is the modification of [description]
+  * Replaced deprecated solar-wind endpoints with /json/rtsw/ endpoints.
 """
 
 import requests
+import inspect
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import urlparse, parse_qs, unquote
+
+try:
+    import aiohttp
+    HAS_AIOHTTP = True
+except ImportError:
+    aiohttp = None
+    HAS_AIOHTTP = False
+
+try:
+    import tomllib
+except ImportError:
+    try:
+        import tomli as tomllib
+    except ImportError:
+        tomllib = None
 
 try:
     from PIL import Image
@@ -521,16 +604,19 @@ except ImportError:
 if HAS_PIL:
     try:
         LANCZOS_FILTER = Image.Resampling.LANCZOS
-    except AttributeError:  # Pillow < 9.1
-        LANCZOS_FILTER = Image.LANCZOS
+    except Exception:
+        try:
+            LANCZOS_FILTER = Image.LANCZOS
+        except Exception:
+            LANCZOS_FILTER = None
 else:
     LANCZOS_FILTER = None
 import json
+import html
 from datetime import datetime, timedelta, timezone
-from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, Tuple
-from collections import defaultdict
-import warnings
+from dataclasses import dataclass, field, replace
+from typing import Optional, List, Dict, Any, Tuple, Callable, Sequence
+from collections import defaultdict, deque
 import logging
 import time
 
@@ -545,23 +631,31 @@ import os
 from pathlib import Path
 import sys
 import math
-# All uses of math.isfinite and math.hypot are guarded by validated inputs.
 import base64
+import copy
 import mimetypes
 import re
 try:
     import uuid
-except ImportError:  # Extremely unlikely: uuid is part of the Python standard library.
+except ImportError:
     import random
     class _UUIDFallback:
+        class _UUIDObj:
+            def __init__(self, hex_value: str):
+                self.hex = hex_value
+
+            def __str__(self) -> str:
+                return self.hex
+
         @staticmethod
         def uuid4():
-            return f"fallback-{random.randint(100000, 999999)}"
+            return _UUIDFallback._UUIDObj(
+                f"{random.getrandbits(128):032x}"
+            )
     uuid = _UUIDFallback()
-# Used for stable run_id generation in reports, storage, and alerts.
 import sqlite3
 import hashlib
-from email.utils import parsedate_to_datetime
+import hmac
 
 # Optional imports with fallbacks
 try:
@@ -570,10 +664,6 @@ try:
 except ImportError:
     HAS_NUMPY = False
     print("NumPy not installed. Some features may be limited.")
-
-# All NumPy-dependent methods use defensive access via getattr().
-# Trend analysis, modeled CME fitting, image metrics, and interactive output
-# include explicit guards and usable fallbacks.
 
 try:
     import matplotlib
@@ -605,23 +695,37 @@ except (ImportError, AttributeError) as exc:
     HAS_SUNPY = False
     print(f"SunPy unavailable ({type(exc).__name__}). Some features may be limited.")
 
-warnings.filterwarnings('ignore')
+# Do not globally suppress warnings. Library and runtime warnings remain visible so
+# deprecations, numerical issues, and upstream compatibility problems can be
+# diagnosed instead of silently hidden.
 
 # ============================================================================
 # CONFIGURATION
 # ============================================================================
 
-VERSION = "4.1.5"
+VERSION = "5.5.2"
+AUTHOR_NAME = "Ahmed.A.E"
+AUTHOR_EMAIL = "ahmed.abdo@science.tanta.edu.eg"
+COPYRIGHT_YEAR = 2026
+COPYRIGHT_NOTICE = f"Copyright (c) {COPYRIGHT_YEAR} {AUTHOR_NAME}. All rights reserved."
+CODE_RIGHTS_NOTICE = (
+    "This software is proprietary unless a separate LICENSE file explicitly "
+    "grants additional permissions. Copying, redistribution, modification, or "
+    "commercial reuse requires prior written permission from the author."
+)
+REPORT_DOWNLOAD_FORM_ENDPOINT = os.getenv(
+    "REPORT_DOWNLOAD_FORM_ENDPOINT", "https://formspree.io/f/mqpebbqq").strip()
+REPORT_DOWNLOAD_FILE = os.getenv("REPORT_DOWNLOAD_FILE", "solar_mission_control_report.pdf").strip()
+DOWNLOAD_PRIVACY_NOTICE = (
+    "Your email address will be recorded to administer this report download. "
+    "Do not continue unless you consent to that processing."
+)
 
-# Default visual output: 2K QHD landscape. These defaults apply to every
-# generated chart, rendered FITS image, and downloaded quicklook image.
+# Default visual output: 2K QHD landscape.
 DEFAULT_OUTPUT_WIDTH = 2560
 DEFAULT_OUTPUT_HEIGHT = 1440
 DEFAULT_OUTPUT_DPI = 200
 
-# Curated reference events used only for normalized pattern comparison.
-# Missing parameters remain None and are excluded from the distance.
-# Values should be reviewed when the catalog is expanded.
 HISTORICAL_STORM_CATALOG = [
     {
         "name": "May 2024 G5 geomagnetic storm",
@@ -649,9 +753,6 @@ HISTORICAL_STORM_CATALOG = [
     },
 ]
 
-# Never store a private key in source code. DEMO_KEY keeps the script
-# usable for light testing; production runs should set NASA_API_KEY in
-# the environment.
 NASA_API_KEY = os.getenv("NASA_API_KEY", "DEMO_KEY").strip() or "DEMO_KEY"
 
 # API Endpoints
@@ -672,26 +773,16 @@ ENDPOINTS = {
     'swpc_f107': 'https://services.swpc.noaa.gov/json/solar-cycle/f10-7cm-flux.json',
     'swpc_regions': 'https://services.swpc.noaa.gov/json/solar_regions.json',
 
-    # here is the modification of the solar wind endpoints.
-    # The following six URLs were REMOVED by NOAA on or about
-    # 30 April 2026 and now return 404:
-    #     products/solar-wind/mag-2-hour.json
-    #     products/solar-wind/mag-7-day.json
-    #     products/solar-wind/plasma-2-hour.json
-    #     products/solar-wind/plasma-7-day.json
-    #     products/ace/mag_1h.json
-    #     products/ace/swepam_1h.json
-    # They are replaced by the RTSW endpoints below, which carry data
-    # from EVERY L1 spacecraft SWPC receives (SOLAR-1, IMAP, DSCOVR,
-    # ACE) in one file, each record tagged with "source" and a boolean
-    # "active" flag showing which spacecraft forecasters were using at
-    # that moment. This is why the old DSCOVR-then-ACE fallback logic
-    # is no longer needed and has been deleted: as of this writing the
-    # active spacecraft is SOLAR-1, so code that looked only for
-    # DSCOVR would have returned nothing anyway.
+    # RTSW L1 Fleet (SOLAR-1, IMAP, DSCOVR, ACE)
     'rtsw_mag': 'https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json',
     'rtsw_wind': 'https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json',
     'rtsw_ephem': 'https://services.swpc.noaa.gov/json/rtsw/rtsw_ephemerides_1h.json',
+
+    # STEREO-A Beacon & SECCHI Off-Sun-Earth-Line Feeds (v5.0.0)
+    'stereo_a_mag': '',  # Optional: configure a verified beacon JSON endpoint
+    'stereo_a_plastic': '',  # Optional: configure a verified beacon JSON endpoint
+    'stereo_a_cor2_latest': 'https://stereo-ssc.nascom.nasa.gov/beacon/beacon_secchi/latest_256/ahead_cor2_latest.jpg',
+    'stereo_a_euvi_195_latest': 'https://stereo-ssc.nascom.nasa.gov/beacon/beacon_secchi/latest_256/ahead_euvi_195_latest.jpg',
 
     # NASA DONKI
     'donki_flr': 'https://ccmc.gsfc.nasa.gov/DONKI-API/get/FLR',
@@ -703,14 +794,10 @@ ENDPOINTS = {
     'donki_mpc': 'https://ccmc.gsfc.nasa.gov/DONKI-API/get/MPC',
     'donki_rbe': 'https://ccmc.gsfc.nasa.gov/DONKI-API/get/RBE',
     'donki_hss': 'https://ccmc.gsfc.nasa.gov/DONKI-API/get/HSS',
+    'donki_wsa_enlil': 'https://ccmc.gsfc.nasa.gov/DONKI-API/get/WSAEnlilSimulations',
     'donki_notifications': 'https://ccmc.gsfc.nasa.gov/DONKI-API/get/notifications',
 }
 
-
-# Observatory image policy: AIA is SunPy/Fido-only. HMI and LASCO first
-# request science FITS through SunPy/Fido over VSO, then use their configured
-# operational JPEG quicklooks when VSO has no usable data. OVATION aurora and
-# the SWPC synoptic map are quicklook-only products.
 IMAGE_SOURCES = [
     {
         'key': 'sdo_aia_193',
@@ -719,7 +806,6 @@ IMAGE_SOURCES = [
                     'plasma. Coronal holes read as the dark regions and are '
                     'the source of the high speed streams in the solar wind '
                     'panel.'),
-        # AIA is SunPy-only as of 2.4.4; no web fallback.
         'urls': [],
     },
     {
@@ -802,26 +888,14 @@ IMAGE_SOURCES = [
 # ============================================================================
 
 def normalise_swpc_product(data: Any) -> List[Dict]:
-    '''
-    Normalise a SWPC /products/ JSON payload to a list of dicts.
-
-    Handles two layouts:
-      1. Legacy: a list of lists, where the first inner list holds the
-         column names and every later list holds the values.
-      2. Current: a list of dicts, each already key-value.
-
-    Returns an empty list for anything unrecognised.
-    '''
+    """Normalise a SWPC /products/ JSON payload to a list of dicts."""
     if not data or not isinstance(data, list):
         return []
 
     first = data[0]
-
-    # Current format: already a list of dicts.
     if isinstance(first, dict):
         return [row for row in data if isinstance(row, dict)]
 
-    # Legacy format: header row plus value rows.
     if isinstance(first, (list, tuple)):
         header = [str(h) for h in first]
         rows = []
@@ -835,7 +909,7 @@ def normalise_swpc_product(data: Any) -> List[Dict]:
 
 
 def as_float(value: Any, default: float = 0.0) -> float:
-    '''Coerce a SWPC value to float, tolerating None, '' and strings.'''
+    """Coerce a SWPC value to float, tolerating None, '' and strings."""
     if value is None or value == '':
         return default
     try:
@@ -845,7 +919,7 @@ def as_float(value: Any, default: float = 0.0) -> float:
 
 
 def as_bool(value: Any, default: bool = False) -> bool:
-    '''Coerce API booleans without treating the string "false" as true.'''
+    """Coerce API booleans without treating the string 'false' as true."""
     if isinstance(value, bool):
         return value
     if isinstance(value, (int, float)):
@@ -860,7 +934,7 @@ def as_bool(value: Any, default: bool = False) -> bool:
 
 
 def parse_swpc_time(value: Any) -> Optional[datetime]:
-    '''Parse any SWPC timestamp string to a timezone-aware UTC datetime.'''
+    """Parse any SWPC timestamp string to a timezone-aware UTC datetime."""
     if not value:
         return None
     if isinstance(value, datetime):
@@ -887,7 +961,7 @@ def parse_swpc_time(value: Any) -> Optional[datetime]:
 
 
 def get_key(row: Dict, *names: str, default: Any = None) -> Any:
-    '''Fetch the first matching key from a dict, ignoring case.'''
+    """Fetch the first matching key from a dict, ignoring case."""
     if not isinstance(row, dict):
         return default
     lowered = {str(k).lower(): v for k, v in row.items()}
@@ -900,7 +974,7 @@ def get_key(row: Dict, *names: str, default: Any = None) -> Any:
 
 
 def newell_coupling(speed: float, by: float, bz: float) -> float:
-    '''Newell coupling function dPhi_MP/dt in (km/s)^(4/3) nT^(2/3).'''
+    """Newell coupling function dPhi_MP/dt in (km/s)^(4/3) nT^(2/3)."""
     try:
         b_t = math.hypot(by, bz)
         if speed <= 0:
@@ -916,7 +990,7 @@ def newell_coupling(speed: float, by: float, bz: float) -> float:
 
 
 def blank_if_zero(value: Any) -> float:
-    '''Return NaN for a missing, zero or negative sample.'''
+    """Return NaN for a missing, zero or negative sample."""
     v = as_float(value, default=float('nan'))
     if v is None:
         return float('nan')
@@ -967,6 +1041,41 @@ class CME:
     note: str = ""
 
 
+@dataclass(frozen=True)
+class CMEArrivalDistribution:
+    """Probabilistic arrival window derived from CME speed uncertainty."""
+    eta_mean: datetime
+    eta_std_hours: float
+    eta_5th_percentile: datetime
+    eta_95th_percentile: datetime
+    method: str = "speed_uncertainty"
+
+
+class CMEArrivalUncertainty:
+    """Estimate a screening-level CME arrival-time distribution."""
+
+    @staticmethod
+    def estimate(cme: CME, speed_uncertainty_percent: float = 0.15,
+                 nominal_eta: Optional[datetime] = None
+                 ) -> Optional[CMEArrivalDistribution]:
+        speed = as_float(getattr(cme, 'speed', None), float('nan'))
+        resolved_eta = nominal_eta or getattr(cme, 'estimated_arrival', None)
+        fraction = as_float(speed_uncertainty_percent, float('nan'))
+        if (not math.isfinite(speed) or speed <= 0 or resolved_eta is None or
+                not math.isfinite(fraction) or fraction <= 0):
+            return None
+        # 1 AU is 149,597,870.7 km and speed is already in km/s.
+        transit_hours = 149_597_870.7 / speed / 3600.0
+        std_hours = max(0.1, transit_hours * fraction)
+        span = timedelta(hours=1.6448536269514722 * std_hours)
+        return CMEArrivalDistribution(
+            eta_mean=resolved_eta,
+            eta_std_hours=round(std_hours, 1),
+            eta_5th_percentile=resolved_eta - span,
+            eta_95th_percentile=resolved_eta + span,
+        )
+
+
 @dataclass
 class GeomagneticStorm:
     """Represents a geomagnetic storm event"""
@@ -975,6 +1084,111 @@ class GeomagneticStorm:
     g_scale: int
     end_time: Optional[datetime] = None
     source: str = "Unknown"
+
+
+@dataclass
+class InterplanetaryShock:
+    """Represents a DONKI Interplanetary Shock (IPS) event."""
+    activity_id: str
+    event_time: datetime
+    location: str = "Earth"
+    catalog: str = "M2M_CATALOG"
+    instruments: Tuple[str, ...] = ()
+    linked_event_ids: Tuple[str, ...] = ()
+    submission_time: Optional[datetime] = None
+    link: str = ""
+    source: str = "DONKI"
+
+
+@dataclass
+class SolarEnergeticParticle:
+    """Represents a DONKI Solar Energetic Particle (SEP) event."""
+    sep_id: str
+    event_time: datetime
+    instruments: Tuple[str, ...] = ()
+    linked_event_ids: Tuple[str, ...] = ()
+    submission_time: Optional[datetime] = None
+    link: str = ""
+    source: str = "DONKI"
+
+
+@dataclass
+class HighSpeedStream:
+    """Represents a DONKI High-Speed Stream (HSS) event."""
+    hss_id: str
+    event_time: datetime
+    instruments: Tuple[str, ...] = ()
+    linked_event_ids: Tuple[str, ...] = ()
+    submission_time: Optional[datetime] = None
+    link: str = ""
+    source: str = "DONKI"
+
+
+@dataclass
+class WSAEnlilSimulation:
+    """Represents a standalone DONKI WSA-Enlil simulation record."""
+    simulation_id: str
+    model_completion_time: datetime
+    au: float = 2.0
+    estimated_shock_arrival_time: Optional[datetime] = None
+    estimated_duration: Optional[float] = None
+    rmin_re: Optional[float] = None
+    kp_18: Optional[int] = None
+    kp_90: Optional[int] = None
+    kp_135: Optional[int] = None
+    kp_180: Optional[int] = None
+    is_earth_gb: bool = False
+    is_earth_minor_impact: bool = False
+    cme_inputs: Tuple[Dict[str, Any], ...] = ()
+    impact_list: Tuple[Dict[str, Any], ...] = ()
+    link: str = ""
+    source: str = "DONKI"
+
+
+@dataclass
+class DonkiNotification:
+    """Represents a DONKI operational notification bulletin."""
+    message_id: str
+    message_type: str
+    message_issue_time: datetime
+    message_url: str = ""
+    body_hash: str = ""
+    message_body: str = ""
+    source: str = "DONKI"
+
+    def metadata_dict(self) -> Dict[str, Any]:
+        return {
+            'message_id': self.message_id,
+            'message_type': self.message_type,
+            'message_issue_time': self.message_issue_time.astimezone(timezone.utc).isoformat(),
+            'message_url': self.message_url,
+            'body_hash': self.body_hash,
+            'source': self.source,
+        }
+
+
+@dataclass
+class MagnetopauseCrossing:
+    """Represents a DONKI Magnetopause Crossing (MPC) event."""
+    mpc_id: str
+    event_time: datetime
+    instruments: Tuple[str, ...] = ()
+    linked_event_ids: Tuple[str, ...] = ()
+    submission_time: Optional[datetime] = None
+    link: str = ""
+    source: str = "DONKI"
+
+
+@dataclass
+class RadiationBeltEnhancement:
+    """Represents a DONKI Radiation Belt Enhancement (RBE) event."""
+    rbe_id: str
+    event_time: datetime
+    instruments: Tuple[str, ...] = ()
+    linked_event_ids: Tuple[str, ...] = ()
+    submission_time: Optional[datetime] = None
+    link: str = ""
+    source: str = "DONKI"
 
 
 @dataclass
@@ -993,12 +1207,14 @@ class SolarWindData:
 
     @property
     def dynamic_pressure(self) -> float:
-        '''Solar wind dynamic pressure P = 1.67e-6 n v^2, in nPa.'''
-        return 1.67e-6 * self.density * (self.speed ** 2)
+        """Solar wind dynamic pressure P = 1.67e-6 n v^2, in nPa."""
+        if not (is_finite_number(self.density) and is_finite_number(self.speed)):
+            return float('nan')
+        return 1.67e-6 * float(self.density) * (float(self.speed) ** 2)
 
     @property
     def coupling(self) -> float:
-        '''Newell coupling function for this sample.'''
+        """Newell coupling function for this sample."""
         return newell_coupling(self.speed, self.by or 0.0, self.bz)
 
 
@@ -1006,15 +1222,15 @@ class SolarWindData:
 # PARKER SOLAR PROBE PRODUCT CATALOGUE
 # ============================================================================
 PSP_PRODUCTS = {
-    'fields_mag_rtn': {'loader':'fields','datatype_candidates':['mag_RTN','mag_rtn'],'level':'l2','kind':'vector3','title':'FIELDS MAG (RTN)','components':('Br','Bt','Bn')},
+    'fields_mag_rtn': {'loader':'fields','datatype_candidates':['mag_RTN','mag_rtn'],'cda_dataset_candidates':['PSP_FLD_L2_MAG_RTN_1MIN'],'level':'l2','kind':'vector3','title':'FIELDS MAG (RTN)','components':('Br','Bt','Bn')},
     'fields_mag_sc': {'loader':'fields','datatype_candidates':['mag_SC','mag_sc'],'level':'l2','kind':'vector3','title':'FIELDS MAG (spacecraft frame)','components':('Bx','By','Bz')},
     'fields_rfs_hfr': {'loader':'fields','datatype_candidates':['rfs_hfr'],'level':'l2','kind':'spectrum','title':'FIELDS RFS HFR'},
     'fields_rfs_lfr': {'loader':'fields','datatype_candidates':['rfs_lfr'],'level':'l2','kind':'spectrum','title':'FIELDS RFS LFR'},
-    'sweap_spc': {'loader':'spc','datatype_candidates':['l3i','l3'],'level':'l3','kind':'multi','title':'SWEAP SPC ion moments'},
-    'sweap_spi_ion': {'loader':'spi','datatype_candidates':['l3i','l3'],'level':'l3','kind':'multi','title':'SWEAP SPAN-I ion moments'},
-    'sweap_spe': {'loader':'spe','datatype_candidates':['l3e','l3'],'level':'l3','kind':'multi','title':'SWEAP SPAN-E electron moments'},
-    'isois_epilo': {'loader':'epilo','datatype_candidates':['l2','rates1h'],'level':'l2','kind':'multi','title':'ISoIS EPI-Lo'},
-    'isois_epihi': {'loader':'epihi','datatype_candidates':['l2','let1_rates1h','het_rates1h'],'level':'l2','kind':'multi','title':'ISoIS EPI-Hi'},
+    'sweap_spc': {'loader':'spc','datatype_candidates':['l3i','l3'],'cda_dataset_candidates':['PSP_SWP_SPC_L3I'],'level':'l3','kind':'multi','title':'SWEAP SPC ion moments'},
+    'sweap_spi_ion': {'loader':'spi','datatype_candidates':['l3i','l3'],'cda_dataset_candidates':['PSP_SWP_SPI_SF00_L3_MOM'],'level':'l3','kind':'multi','title':'SWEAP SPAN-I ion moments'},
+    'sweap_spe': {'loader':'spe','datatype_candidates':['l3e','l3','l2'],'level':'l3','kind':'multi','title':'SWEAP SPAN-E electron moments'},
+    'isois_epilo': {'loader':'epilo','datatype_candidates':['pe','ic','rates1h','l2'],'level':'l2','kind':'multi','title':'ISoIS EPI-Lo'},
+    'isois_epihi': {'loader':'epihi','datatype_candidates':['let1_rates1h','het_rates1h'],'level':'l2','kind':'multi','title':'ISoIS EPI-Hi'},
 }
 
 
@@ -1037,6 +1253,1937 @@ class ProtonData:
     source: str = "GOES"
 
 
+def is_finite_number(value: Any) -> bool:
+    """Return True only when value can be represented as a finite float."""
+    try:
+        return math.isfinite(float(value))
+    except (TypeError, ValueError, OverflowError):
+        return False
+
+
+def cli_has_option(argv: Sequence[str], *flags: str) -> bool:
+    """Return True when one of flags is explicitly present in argv."""
+    for token in argv:
+        if token in flags:
+            return True
+        if any(token.startswith(flag + '=') for flag in flags):
+            return True
+    return False
+
+
+def json_safe_value(value: Any) -> Any:
+    """Recursively convert runtime and science objects into strict JSON values."""
+    if isinstance(value, datetime):
+        return value.astimezone(timezone.utc).isoformat()
+    if HAS_NUMPY and isinstance(value, np.generic):
+        return json_safe_value(value.item())
+    if HAS_NUMPY and isinstance(value, np.ndarray) and not type(value).__module__.startswith(('astropy.', 'sunpy.')):
+        return json_safe_value(value.tolist())
+    if isinstance(value, dict):
+        return {str(k): json_safe_value(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [json_safe_value(v) for v in value]
+    if hasattr(value, '__dataclass_fields__'):
+        return {name: json_safe_value(getattr(value, name)) for name in value.__dataclass_fields__}
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if value is None or isinstance(value, (str, bool, int, float)):
+        return value
+    value_type=type(value); module_name=getattr(value_type,'__module__','')
+    if module_name.startswith(('astropy.','sunpy.')):
+        rendered=None
+        if getattr(value,'unit',None) is not None and hasattr(value,'value'):
+            try: rendered=value.value
+            except Exception: rendered=None
+        if rendered is None and callable(getattr(value,'to_string',None)):
+            try: rendered=value.to_string()
+            except Exception: rendered=None
+        if rendered is None and hasattr(value,'value'):
+            try: rendered=value.value
+            except Exception: rendered=None
+        if rendered is None: rendered=str(value)
+        payload={'__type__':f'{module_name}.{value_type.__name__}','value':json_safe_value(rendered)}
+        if getattr(value,'unit',None) is not None: payload['unit']=str(value.unit)
+        frame=getattr(getattr(value,'frame',None),'name',None)
+        if frame: payload['frame']=str(frame)
+        return payload
+    try:
+        json.dumps(value,allow_nan=False); return value
+    except (TypeError,ValueError,OverflowError):
+        return {'__type__':f'{module_name}.{value_type.__name__}','value':str(value)}
+
+
+class TelemetryStore:
+    """Persistent SQLite WAL storage for normalized telemetry samples."""
+
+    TABLES = ('ts_xray', 'ts_protons', 'ts_solar_wind', 'ts_kp', 'ts_dst')
+
+    def __init__(self, db_path: str):
+        self.db_path = os.path.abspath(os.path.expanduser(db_path))
+        os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
+        self._write_lock = threading.RLock()
+        self._init_db()
+
+    def _get_connection(self) -> sqlite3.Connection:
+        connection = sqlite3.connect(self.db_path, timeout=30.0)
+        connection.row_factory = sqlite3.Row
+        connection.execute('PRAGMA busy_timeout = 30000')
+        connection.execute('PRAGMA journal_mode = WAL')
+        connection.execute('PRAGMA synchronous = NORMAL')
+        connection.execute('PRAGMA foreign_keys = ON')
+        return connection
+
+    def _init_db(self) -> None:
+        with self._get_connection() as connection:
+            connection.executescript("""
+                CREATE TABLE IF NOT EXISTS ts_xray (
+                    timestamp TEXT PRIMARY KEY,
+                    flux_short REAL, flux_long REAL, source TEXT
+                );
+                CREATE TABLE IF NOT EXISTS ts_protons (
+                    timestamp TEXT PRIMARY KEY,
+                    flux_10mev REAL, flux_50mev REAL,
+                    flux_100mev REAL, source TEXT
+                );
+                CREATE TABLE IF NOT EXISTS ts_solar_wind (
+                    timestamp TEXT NOT NULL, source TEXT NOT NULL,
+                    speed REAL, density REAL, temperature REAL,
+                    bz REAL, bt REAL, bx REAL, by REAL, active INTEGER,
+                    PRIMARY KEY (timestamp, source)
+                );
+                CREATE TABLE IF NOT EXISTS ts_kp (
+                    timestamp TEXT PRIMARY KEY,
+                    kp REAL, kp_fraction REAL, observed TEXT
+                );
+                CREATE TABLE IF NOT EXISTS ts_dst (
+                    timestamp TEXT PRIMARY KEY, dst REAL
+                );
+                CREATE TABLE IF NOT EXISTS ts_external_forecasts (
+                    forecast_id TEXT PRIMARY KEY,
+                    provider TEXT NOT NULL,
+                    product TEXT NOT NULL,
+                    issued_at TEXT NOT NULL,
+                    target_start TEXT NOT NULL,
+                    target_end TEXT,
+                    forecast_kp REAL,
+                    forecast_category TEXT,
+                    payload_hash TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_external_target
+                    ON ts_external_forecasts(provider,product,target_start);
+                CREATE INDEX IF NOT EXISTS idx_external_issued
+                    ON ts_external_forecasts(issued_at);
+                CREATE TABLE IF NOT EXISTS ts_nowcast_archive (
+                    forecast_id TEXT PRIMARY KEY,
+                    issued_at TEXT NOT NULL,
+                    target_time TEXT NOT NULL,
+                    horizon_hours INTEGER NOT NULL,
+                    model_type TEXT NOT NULL,
+                    model_version TEXT NOT NULL,
+                    pred_dst_nt REAL,
+                    interval_lower_dst_nt REAL,
+                    interval_upper_dst_nt REAL,
+                    interval_method TEXT NOT NULL,
+                    interval_half_width_nt REAL,
+                    conformal_lower_dst_nt REAL,
+                    conformal_upper_dst_nt REAL,
+                    conformal_half_width_nt REAL,
+                    calibration_status TEXT,
+                    pred_kp REAL,
+                    baseline_dst_nt REAL,
+                    baseline_kp REAL,
+                    input_snapshot_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_nowcast_issue_target
+                    ON ts_nowcast_archive(issued_at,target_time,horizon_hours,model_version);
+                CREATE INDEX IF NOT EXISTS idx_nowcast_target
+                    ON ts_nowcast_archive(target_time,horizon_hours);
+                CREATE INDEX IF NOT EXISTS idx_nowcast_issued
+                    ON ts_nowcast_archive(issued_at);
+                CREATE TABLE IF NOT EXISTS ts_donki_events (
+                    event_id TEXT PRIMARY KEY,
+                    product_type TEXT NOT NULL,
+                    event_time TEXT NOT NULL,
+                    location TEXT,
+                    catalog TEXT,
+                    payload_json TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_donki_events_type_time
+                    ON ts_donki_events(product_type, event_time);
+                CREATE TABLE IF NOT EXISTS ts_donki_notifications (
+                    message_id TEXT PRIMARY KEY,
+                    message_type TEXT NOT NULL,
+                    message_issue_time TEXT NOT NULL,
+                    message_url TEXT,
+                    body_hash TEXT NOT NULL UNIQUE,
+                    message_body TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS idx_donki_notifications_time
+                    ON ts_donki_notifications(message_issue_time);
+                CREATE INDEX IF NOT EXISTS idx_xray_time ON ts_xray(timestamp);
+                CREATE INDEX IF NOT EXISTS idx_protons_time ON ts_protons(timestamp);
+                CREATE INDEX IF NOT EXISTS idx_wind_time ON ts_solar_wind(timestamp);
+                CREATE INDEX IF NOT EXISTS idx_kp_time ON ts_kp(timestamp);
+                CREATE INDEX IF NOT EXISTS idx_dst_time ON ts_dst(timestamp);
+            """)
+            existing_columns = {row['name'] for row in connection.execute(
+                'PRAGMA table_info(ts_nowcast_archive)').fetchall()}
+            for column, data_type in {
+                'conformal_lower_dst_nt': 'REAL',
+                'conformal_upper_dst_nt': 'REAL',
+                'conformal_half_width_nt': 'REAL',
+                'calibration_status': 'TEXT',
+            }.items():
+                if column not in existing_columns:
+                    connection.execute(
+                        f'ALTER TABLE ts_nowcast_archive ADD COLUMN {column} {data_type}')
+
+    @staticmethod
+    def _stamp(value: datetime) -> str:
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc).isoformat()
+
+    def _executemany(self, sql: str, records: List[Tuple]) -> int:
+        if not records:
+            return 0
+        with self._write_lock, self._get_connection() as connection:
+            connection.executemany(sql, records)
+        return len(records)
+
+    def save_xray(self, data: List[XRayData]) -> int:
+        records = [(self._stamp(item.timestamp), item.flux_short,
+                    item.flux_long, item.source) for item in data]
+        return self._executemany("""
+            INSERT INTO ts_xray(timestamp, flux_short, flux_long, source)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(timestamp) DO UPDATE SET
+                flux_short=excluded.flux_short, flux_long=excluded.flux_long,
+                source=excluded.source
+        """, records)
+
+    def save_protons(self, data: List[ProtonData]) -> int:
+        records = [(self._stamp(item.timestamp), item.flux_10mev,
+                    item.flux_50mev, item.flux_100mev, item.source)
+                   for item in data]
+        return self._executemany("""
+            INSERT INTO ts_protons(timestamp, flux_10mev, flux_50mev,
+                                   flux_100mev, source)
+            VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(timestamp) DO UPDATE SET
+                flux_10mev=excluded.flux_10mev,
+                flux_50mev=excluded.flux_50mev,
+                flux_100mev=excluded.flux_100mev, source=excluded.source
+        """, records)
+
+    def save_solar_wind(self, data: List[SolarWindData]) -> int:
+        records = [(self._stamp(item.timestamp), item.source, item.speed,
+                    item.density, item.temperature, item.bz, item.bt,
+                    item.bx, item.by, int(bool(item.active))) for item in data]
+        return self._executemany("""
+            INSERT INTO ts_solar_wind(timestamp, source, speed, density,
+                temperature, bz, bt, bx, by, active)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(timestamp, source) DO UPDATE SET
+                speed=excluded.speed, density=excluded.density,
+                temperature=excluded.temperature, bz=excluded.bz,
+                bt=excluded.bt, bx=excluded.bx, by=excluded.by,
+                active=excluded.active
+        """, records)
+
+    def save_kp(self, rows: List[Dict]) -> int:
+        records = []
+        for row in rows:
+            stamp = parse_swpc_time(row.get('time_tag'))
+            kp = as_float(row.get('kp'), float('nan'))
+            kp_fraction = as_float(row.get('kp_fraction'), float('nan'))
+            if stamp is None or not math.isfinite(kp):
+                continue
+            records.append((self._stamp(stamp), kp,
+                            kp_fraction if math.isfinite(kp_fraction) else None,
+                            str(row.get('observed', 'observed'))))
+        return self._executemany("""
+            INSERT INTO ts_kp(timestamp, kp, kp_fraction, observed)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(timestamp) DO UPDATE SET kp=excluded.kp,
+                kp_fraction=excluded.kp_fraction, observed=excluded.observed
+        """, records)
+
+    def save_dst(self, rows: List[Dict]) -> int:
+        records = []
+        for row in rows:
+            stamp = parse_swpc_time(row.get('time_tag'))
+            dst = as_float(row.get('dst'), float('nan'))
+            if stamp is None or not math.isfinite(dst):
+                continue
+            records.append((self._stamp(stamp), dst))
+        return self._executemany("""
+            INSERT INTO ts_dst(timestamp, dst) VALUES (?, ?)
+            ON CONFLICT(timestamp) DO UPDATE SET dst=excluded.dst
+        """, records)
+
+    def _range(self, sql: str, start: datetime, end: datetime) -> List[sqlite3.Row]:
+        with self._get_connection() as connection:
+            return connection.execute(
+                sql, (self._stamp(start), self._stamp(end))).fetchall()
+
+    def get_xray_range(self, start: datetime, end: datetime) -> List[XRayData]:
+        rows = self._range("""SELECT * FROM ts_xray
+                              WHERE timestamp BETWEEN ? AND ? ORDER BY timestamp""", start, end)
+        return [XRayData(parse_swpc_time(row['timestamp']), row['flux_short'],
+                         row['flux_long'], row['source']) for row in rows]
+
+    def get_protons_range(self, start: datetime, end: datetime) -> List[ProtonData]:
+        rows = self._range("""SELECT * FROM ts_protons
+                              WHERE timestamp BETWEEN ? AND ? ORDER BY timestamp""", start, end)
+        return [ProtonData(parse_swpc_time(row['timestamp']), row['flux_10mev'],
+                           row['flux_50mev'], row['flux_100mev'], row['source'])
+                for row in rows]
+
+    def get_solar_wind_range(self, start: datetime, end: datetime,
+                             active_only: bool = True) -> List[SolarWindData]:
+        active_clause = ' AND active = 1' if active_only else ''
+        rows = self._range(f"""SELECT * FROM ts_solar_wind
+                               WHERE timestamp BETWEEN ? AND ?{active_clause}
+                               ORDER BY timestamp""", start, end)
+        return [SolarWindData(timestamp=parse_swpc_time(row['timestamp']),
+                              speed=row['speed'], density=row['density'],
+                              temperature=row['temperature'], bz=row['bz'], bt=row['bt'],
+                              bx=row['bx'], by=row['by'], source=row['source'],
+                              active=bool(row['active'])) for row in rows]
+
+    def get_kp_range(self, start: datetime, end: datetime) -> List[Dict]:
+        rows = self._range("""SELECT timestamp AS time_tag, kp, kp_fraction, observed
+                              FROM ts_kp WHERE timestamp BETWEEN ? AND ?
+                              ORDER BY timestamp""", start, end)
+        return [dict(row) for row in rows]
+
+    def get_dst_range(self, start: datetime, end: datetime) -> List[Dict]:
+        rows = self._range("""SELECT timestamp AS time_tag, dst FROM ts_dst
+                              WHERE timestamp BETWEEN ? AND ? ORDER BY timestamp""", start, end)
+        return [dict(row) for row in rows]
+
+    def save_nowcast_result(self, nowcast: Dict[str, Any]) -> int:
+        """Immutably archive screening and conformal intervals separately."""
+        if not nowcast or not nowcast.get('available'):
+            return 0
+        issued = parse_swpc_time(nowcast.get('generated_at')) or datetime.now(timezone.utc)
+        issued_iso = self._stamp(issued)
+        model_type = str(nowcast.get('model_type', 'unknown'))
+        model_version = str(nowcast.get('model_version', VERSION))
+        inputs = json_safe_value(nowcast.get('inputs') or {})
+        baseline_dst = as_float(inputs.get('dst_nt'), float('nan'))
+        baseline_kp = as_float(inputs.get('kp'), float('nan'))
+        input_json = json.dumps(inputs, sort_keys=True, ensure_ascii=False, allow_nan=False)
+        records = []
+        predictions=nowcast.get('predictions') or {}
+        if not predictions:
+            logging.warning('Available nowcast has no predictions; archive write skipped')
+            return 0
+        for prediction in predictions.values():
+            if not isinstance(prediction, dict):
+                continue
+            target = parse_swpc_time(prediction.get('target_time_utc'))
+            horizon = int(as_float(prediction.get('horizon_hours'), 0))
+            if target is None or horizon <= 0 or issued >= target:
+                continue
+            target_iso = self._stamp(target)
+            identity = f'{issued_iso}|{target_iso}|{horizon}|{model_version}'
+            forecast_id = hashlib.sha256(identity.encode('utf-8')).hexdigest()
+            def finite_or_none(value):
+                number = as_float(value, float('nan'))
+                return number if math.isfinite(number) else None
+            records.append((
+                forecast_id, issued_iso, target_iso, horizon, model_type, model_version,
+                finite_or_none(prediction.get('dst_nt')),
+                finite_or_none(prediction.get('dst_screening_lower_nt')),
+                finite_or_none(prediction.get('dst_screening_upper_nt')),
+                'empirical_screening_range',
+                finite_or_none(prediction.get('screening_half_width_nt')),
+                finite_or_none(prediction.get('dst_conformal_lower_nt')),
+                finite_or_none(prediction.get('dst_conformal_upper_nt')),
+                finite_or_none(prediction.get('conformal_half_width_nt')),
+                str(prediction.get('calibration_status', 'insufficient_samples')),
+                finite_or_none(prediction.get('kp')),
+                baseline_dst if math.isfinite(baseline_dst) else None,
+                baseline_kp if math.isfinite(baseline_kp) else None,
+                input_json, datetime.now(timezone.utc).isoformat()))
+        return self._executemany("""
+            INSERT OR IGNORE INTO ts_nowcast_archive(
+                forecast_id,issued_at,target_time,horizon_hours,model_type,
+                model_version,pred_dst_nt,interval_lower_dst_nt,
+                interval_upper_dst_nt,interval_method,interval_half_width_nt,
+                conformal_lower_dst_nt,conformal_upper_dst_nt,
+                conformal_half_width_nt,calibration_status,pred_kp,
+                baseline_dst_nt,baseline_kp,input_snapshot_json,created_at
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        """, records)
+
+    def save_external_kp_forecast(self, rows: List[Dict[str, Any]],
+                                  issued_at: Optional[datetime] = None,
+                                  provider: str = 'NOAA_SWPC') -> int:
+        """Archive already-fetched 3-hour Kp forecasts immutably."""
+        issued = issued_at or datetime.now(timezone.utc)
+        issued_iso = self._stamp(issued)
+        records = []
+        for row in rows or []:
+            target = parse_swpc_time(row.get('time_tag') or row.get('target_time'))
+            kp = as_float(row.get('kp'), float('nan'))
+            if target is None or not math.isfinite(kp) or issued >= target:
+                continue
+            target_end = target + timedelta(hours=3)
+            normalized = json_safe_value(row)
+            payload = json.dumps(normalized, sort_keys=True, ensure_ascii=False,
+                                 allow_nan=False)
+            payload_hash = hashlib.sha256(payload.encode('utf-8')).hexdigest()
+            identity = f'{provider}|kp_3h|{issued_iso}|{self._stamp(target)}|{payload_hash}'
+            forecast_id = hashlib.sha256(identity.encode('utf-8')).hexdigest()
+            records.append((forecast_id, provider, 'kp_3h', issued_iso,
+                self._stamp(target), self._stamp(target_end), kp,
+                str(row.get('observed', row.get('category', 'forecast'))),
+                payload_hash, datetime.now(timezone.utc).isoformat()))
+        return self._executemany("""
+            INSERT OR IGNORE INTO ts_external_forecasts(
+                forecast_id,provider,product,issued_at,target_start,target_end,
+                forecast_kp,forecast_category,payload_hash,created_at
+            ) VALUES (?,?,?,?,?,?,?,?,?,?)
+        """, records)
+
+    def get_verified_nowcast_pairs(self, start: datetime, end: datetime,
+                                   horizon_hours: Optional[int] = None,
+                                   tolerance_minutes: int = 35,
+                                   deduplicate_observation: bool = True) -> List[Dict[str, Any]]:
+        """Match forecasts to nearest Dst rows without SQLite timestamp arithmetic."""
+        clauses = ['target_time BETWEEN ? AND ?', 'issued_at < target_time']
+        params: List[Any] = [self._stamp(start), self._stamp(end)]
+        if horizon_hours is not None:
+            clauses.append('horizon_hours = ?')
+            params.append(int(horizon_hours))
+        tolerance = max(1, min(180, int(tolerance_minutes)))
+        tolerance_seconds = float(tolerance * 60)
+        with self._get_connection() as connection:
+            forecasts = connection.execute(
+                'SELECT * FROM ts_nowcast_archive WHERE ' + ' AND '.join(clauses) +
+                ' ORDER BY target_time ASC, issued_at ASC', tuple(params)).fetchall()
+            dst_rows = connection.execute(
+                'SELECT timestamp,dst FROM ts_dst '
+                'WHERE timestamp BETWEEN ? AND ? AND dst IS NOT NULL '
+                'ORDER BY timestamp ASC',
+                (self._stamp(start - timedelta(minutes=tolerance)),
+                 self._stamp(end + timedelta(minutes=tolerance)))).fetchall()
+        observations: List[Tuple[datetime, str, float]] = []
+        for dst_row in dst_rows:
+            observed_at = parse_swpc_time(dst_row['timestamp'])
+            observed_dst = as_float(dst_row['dst'], float('nan'))
+            if observed_at is not None and math.isfinite(observed_dst):
+                observations.append((observed_at, str(dst_row['timestamp']), observed_dst))
+        if not observations or not forecasts:
+            return []
+        selected: Dict[Tuple[str, int], Tuple[Tuple[float, float, float], Dict[str, Any]]] = {}
+        output: List[Dict[str, Any]] = []
+        for row in forecasts:
+            issued = parse_swpc_time(row['issued_at'])
+            target = parse_swpc_time(row['target_time'])
+            if issued is None or target is None or issued >= target:
+                continue
+            nearest = None
+            nearest_offset = tolerance_seconds + 1.0
+            for observed_at, observed_iso, observed_dst in observations:
+                if observed_at <= issued:
+                    continue
+                offset = abs((observed_at - target).total_seconds())
+                if offset <= tolerance_seconds and offset < nearest_offset:
+                    nearest = (observed_at, observed_iso, observed_dst)
+                    nearest_offset = offset
+            if nearest is None:
+                continue
+            item = dict(row)
+            item['observation_time'] = nearest[1]
+            item['obs_dst_nt'] = nearest[2]
+            item['target_observation_offset_seconds'] = round(nearest_offset, 3)
+            actual_lead = (target - issued).total_seconds()
+            nominal_lead = int(row['horizon_hours']) * 3600.0
+            item['actual_lead_seconds'] = round(actual_lead, 3)
+            item['nominal_lead_error_seconds'] = round(abs(actual_lead - nominal_lead), 3)
+            if not deduplicate_observation:
+                output.append(item)
+                continue
+            key = (nearest[1], int(row['horizon_hours']))
+            rank = (nearest_offset, abs(actual_lead - nominal_lead), -issued.timestamp())
+            previous = selected.get(key)
+            if previous is None or rank < previous[0]:
+                selected[key] = (rank, item)
+        if deduplicate_observation:
+            output = [entry[1] for entry in selected.values()]
+            output.sort(key=lambda row: (row['observation_time'], row['issued_at']))
+        return output
+
+    @staticmethod
+    def _kp_bin_start(value: datetime) -> datetime:
+        """Floor a timestamp to the canonical UTC planetary-Kp 3-hour bin."""
+        stamp = value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        stamp = stamp.astimezone(timezone.utc)
+        return stamp.replace(hour=(stamp.hour // 3) * 3, minute=0,
+                             second=0, microsecond=0)
+
+    def get_aligned_kp_verification_rows(
+        self, start: datetime, end: datetime,
+        observation_tolerance_minutes: int = 40,
+    ) -> List[Dict[str, Any]]:
+        """Return leak-free common 3-hour targets for SMC, NOAA, and persistence.
+
+        Each row is anchored to one SMC issuance. NOAA must have been archived no
+        later than that issuance, and persistence is the latest observed Kp known
+        no later than that same issuance. All three forecasts are scored only when
+        an observed Kp exists for the identical canonical UTC target bin.
+        """
+        start_iso, end_iso = self._stamp(start), self._stamp(end)
+        with self._get_connection() as connection:
+            smc_rows = connection.execute("""
+                SELECT forecast_id,issued_at,target_time,horizon_hours,pred_kp,
+                       model_version FROM ts_nowcast_archive
+                WHERE target_time BETWEEN ? AND ? AND pred_kp IS NOT NULL
+                  AND issued_at < target_time
+                ORDER BY target_time,issued_at
+            """, (start_iso, end_iso)).fetchall()
+            noaa_rows = connection.execute("""
+                SELECT forecast_id,issued_at,target_start,target_end,forecast_kp
+                FROM ts_external_forecasts
+                WHERE provider='NOAA_SWPC' AND product='kp_3h'
+                  AND target_start BETWEEN ? AND ? AND forecast_kp IS NOT NULL
+                  AND issued_at < target_start
+                ORDER BY target_start,issued_at
+            """, (self._stamp(start-timedelta(hours=3)),
+                  self._stamp(end+timedelta(hours=3)))).fetchall()
+            kp_rows = connection.execute("""
+                SELECT timestamp,kp,observed FROM ts_kp
+                WHERE timestamp BETWEEN ? AND ? AND kp IS NOT NULL
+                ORDER BY timestamp
+            """, (self._stamp(start-timedelta(days=5)),
+                  self._stamp(end+timedelta(hours=3)))).fetchall()
+        observations=[]
+        for row in kp_rows:
+            stamp=parse_swpc_time(row['timestamp']); kp=as_float(row['kp'],float('nan'))
+            label=str(row['observed'] or '').lower()
+            if stamp is not None and math.isfinite(kp) and not any(
+                    token in label for token in ('predicted','forecast')):
+                observations.append((stamp,kp,str(row['timestamp'])))
+        noaa=[]
+        for row in noaa_rows:
+            issued=parse_swpc_time(row['issued_at']); target=parse_swpc_time(row['target_start'])
+            if issued and target:
+                noaa.append((self._kp_bin_start(target),issued,row))
+        tolerance=max(1,min(90,int(observation_tolerance_minutes)))*60.0
+        candidates=[]
+        for row in smc_rows:
+            issued=parse_swpc_time(row['issued_at']); target=parse_swpc_time(row['target_time'])
+            smc_kp=as_float(row['pred_kp'],float('nan'))
+            if issued is None or target is None or not math.isfinite(smc_kp): continue
+            bin_start=self._kp_bin_start(target)
+            if issued >= bin_start: continue
+            observed=min((x for x in observations if x[0] > issued and
+                         abs((x[0]-bin_start).total_seconds()) <= tolerance),
+                         key=lambda x:abs((x[0]-bin_start).total_seconds()),default=None)
+            if observed is None: continue
+            eligible_noaa=[x for x in noaa if x[0]==bin_start and x[1] <= issued]
+            if not eligible_noaa: continue
+            noaa_pick=max(eligible_noaa,key=lambda x:x[1])
+            persistence=max((x for x in observations if x[0] <= issued),
+                            key=lambda x:x[0],default=None)
+            if persistence is None: continue
+            candidates.append({
+                'target_start':self._stamp(bin_start),
+                'target_end':self._stamp(bin_start+timedelta(hours=3)),
+                'smc_issued_at':self._stamp(issued),
+                'smc_forecast_id':str(row['forecast_id']),
+                'smc_horizon_hours':int(row['horizon_hours']),
+                'smc_model_version':str(row['model_version']),
+                'smc_kp':smc_kp,
+                'noaa_issued_at':self._stamp(noaa_pick[1]),
+                'noaa_forecast_id':str(noaa_pick[2]['forecast_id']),
+                'noaa_kp':float(noaa_pick[2]['forecast_kp']),
+                'persistence_observation_time':self._stamp(persistence[0]),
+                'persistence_kp':float(persistence[1]),
+                'observed_time':observed[2], 'observed_kp':float(observed[1]),
+                'observation_offset_seconds':round(abs((observed[0]-bin_start).total_seconds()),3),
+            })
+        # One fair comparison per target: latest SMC issuance still preceding bin.
+        selected={}
+        for row in candidates:
+            key=row['target_start']
+            if key not in selected or row['smc_issued_at'] > selected[key]['smc_issued_at']:
+                selected[key]=row
+        return [selected[key] for key in sorted(selected)]
+
+    def prune_older_than(self, retention_days: int) -> int:
+        cutoff = self._stamp(datetime.now(timezone.utc) -
+                             timedelta(days=max(1, int(retention_days))))
+        deleted = 0
+        with self._write_lock, self._get_connection() as connection:
+            for table in self.TABLES:
+                cursor = connection.execute(
+                    f'DELETE FROM {table} WHERE timestamp < ?', (cutoff,))
+                deleted += max(0, cursor.rowcount)
+            cursor = connection.execute(
+                'DELETE FROM ts_nowcast_archive WHERE target_time < ?', (cutoff,))
+            deleted += max(0, cursor.rowcount)
+            cursor = connection.execute(
+                'DELETE FROM ts_external_forecasts WHERE target_start < ?', (cutoff,))
+            deleted += max(0, cursor.rowcount)
+            cursor = connection.execute(
+                'DELETE FROM ts_donki_events WHERE event_time < ?', (cutoff,))
+            deleted += max(0, cursor.rowcount)
+            cursor = connection.execute(
+                'DELETE FROM ts_donki_notifications WHERE message_issue_time < ?', (cutoff,))
+            deleted += max(0, cursor.rowcount)
+        return deleted
+
+    def save_donki_events(self, product_type: str, items: Sequence[Any]) -> int:
+        """Persist structured DONKI events, including CME analyses, idempotently."""
+        if not items:
+            return 0
+        now_iso = datetime.now(timezone.utc).isoformat()
+        records = []
+        for item in items:
+            payload = json_safe_value(item)
+            if not isinstance(payload, dict):
+                continue
+            event_id = str(
+                payload.get('activity_id') or payload.get('sep_id')
+                or payload.get('hss_id') or payload.get('simulation_id')
+                or payload.get('mpc_id') or payload.get('rbe_id')
+                or payload.get('event_id') or payload.get('associated_cme_id')
+                or payload.get('associatedCMEID') or ''
+            ).strip()
+            raw_time = (
+                getattr(item, 'event_time', None)
+                or getattr(item, 'model_completion_time', None)
+                or parse_swpc_time(
+                    payload.get('event_time') or payload.get('model_completion_time')
+                    or payload.get('time21_5') or payload.get('analysis_time')
+                )
+            )
+            if str(product_type).upper() == 'CME_ANALYSIS' and raw_time is not None:
+                # A CME may have multiple analyses and DONKI can omit the linked
+                # CME activity ID. Include time plus a short content hash so
+                # unlinked same-second analyses remain deterministic and unique.
+                analysis_owner = event_id or 'UNLINKED'
+                payload_fingerprint = hashlib.sha256(
+                    json.dumps(payload, sort_keys=True, ensure_ascii=False,
+                               allow_nan=False).encode('utf-8')
+                ).hexdigest()[:16]
+                event_id = (
+                    f"{analysis_owner}|{self._stamp(raw_time)}|{payload_fingerprint}"
+                )
+            if not event_id or raw_time is None:
+                continue
+            location = str(payload.get('location') or '')
+            catalog = str(payload.get('catalog') or '')
+            payload_str = json.dumps(payload, sort_keys=True, ensure_ascii=False, allow_nan=False)
+            records.append((
+                event_id, str(product_type).upper(), self._stamp(raw_time),
+                location, catalog, payload_str, now_iso,
+            ))
+        return self._executemany("""
+            INSERT INTO ts_donki_events(
+                event_id, product_type, event_time, location, catalog, payload_json, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(event_id) DO UPDATE SET
+                product_type=excluded.product_type,
+                event_time=excluded.event_time,
+                location=excluded.location,
+                catalog=excluded.catalog,
+                payload_json=excluded.payload_json
+        """, records)
+
+    def get_donki_events_range(self, start: datetime, end: datetime,
+                               product_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        clauses = ['event_time BETWEEN ? AND ?']
+        params: List[Any] = [self._stamp(start), self._stamp(end)]
+        if product_type:
+            clauses.append('product_type = ?')
+            params.append(str(product_type).upper())
+        with self._get_connection() as connection:
+            rows = connection.execute(
+                'SELECT event_id, product_type, event_time, location, catalog, payload_json '
+                'FROM ts_donki_events WHERE ' + ' AND '.join(clauses) +
+                ' ORDER BY event_time DESC',
+                tuple(params),
+            ).fetchall()
+        output: List[Dict[str, Any]] = []
+        for row in rows:
+            item = dict(row)
+            try:
+                item['payload'] = json.loads(item.pop('payload_json'))
+            except (TypeError, ValueError):
+                item['payload'] = {}
+            output.append(item)
+        return output
+
+    def save_donki_notifications(self, notifications: Sequence[DonkiNotification]) -> int:
+        """Store DONKI notifications deduplicated by message_id and body_hash."""
+        if not notifications:
+            return 0
+        now_iso = datetime.now(timezone.utc).isoformat()
+        records = []
+        seen_ids = set()
+        seen_hashes = set()
+        for note in notifications:
+            if not isinstance(note, DonkiNotification):
+                continue
+            body = str(note.message_body or '')
+            body_hash = note.body_hash or hashlib.sha256(body.encode('utf-8')).hexdigest()
+            msg_id = str(note.message_id or body_hash[:16]).strip()
+            if not msg_id or msg_id in seen_ids or body_hash in seen_hashes:
+                continue
+            seen_ids.add(msg_id)
+            seen_hashes.add(body_hash)
+            records.append((
+                msg_id, str(note.message_type or 'OTHER'),
+                self._stamp(note.message_issue_time),
+                str(note.message_url or ''), body_hash, body, now_iso,
+            ))
+        return self._executemany("""
+            INSERT OR IGNORE INTO ts_donki_notifications(
+                message_id, message_type, message_issue_time, message_url,
+                body_hash, message_body, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, records)
+
+    def get_donki_notifications_range(self, start: datetime, end: datetime,
+                                      include_body: bool = False) -> List[Dict[str, Any]]:
+        columns = (
+            'message_id, message_type, message_issue_time, message_url, body_hash, message_body'
+            if include_body else
+            'message_id, message_type, message_issue_time, message_url, body_hash'
+        )
+        rows = self._range(
+            f'SELECT {columns} FROM ts_donki_notifications '
+            'WHERE message_issue_time BETWEEN ? AND ? '
+            'ORDER BY message_issue_time DESC',
+            start, end,
+        )
+        return [dict(row) for row in rows]
+
+    def counts(self) -> Dict[str, int]:
+        with self._get_connection() as connection:
+            return {table: int(connection.execute(
+                f'SELECT COUNT(*) FROM {table}').fetchone()[0])
+                for table in self.TABLES}
+
+
+def export_telemetry_to_parquet(db_path: str, output_dir: str) -> Dict[str, str]:
+    """Export telemetry tables to Parquet using PyArrow/Pandas when available."""
+    parquet_dir = os.path.join(output_dir, 'parquet')
+    os.makedirs(parquet_dir, exist_ok=True)
+    exported: Dict[str, str] = {}
+    try:
+        import pandas as pd
+        import pyarrow  # noqa: F401
+    except ImportError:
+        print('  Parquet export skipped: install pandas and pyarrow.')
+        return exported
+    connection = sqlite3.connect(db_path)
+    try:
+        for table in TelemetryStore.TABLES:
+            frame = pd.read_sql_query(f'SELECT * FROM {table}', connection)
+            destination = os.path.join(parquet_dir, f'{table}.parquet')
+            frame.to_parquet(destination, engine='pyarrow', compression='zstd', index=False)
+            exported[table] = destination
+    finally:
+        connection.close()
+    print(f'  Exported {len(exported)} telemetry tables to Parquet.')
+    return exported
+
+
+# ============================================================================
+# V5.0.0 UPGRADES 1, 3, AND 4: L1 VALIDATOR, ML NOWCASTER, STEREO-A BEACON
+# ============================================================================
+
+class L1FleetValidator:
+    """Cross-validates simultaneous L1 spacecraft and despikes telemetry."""
+
+    DEFAULT_THRESHOLDS = {
+        'speed_delta_kms': 150.0,
+        'bz_delta_nt': 8.0,
+        'bt_delta_nt': 10.0,
+        'density_delta_cm3': 15.0,
+        'zscore_limit': 3.5,
+    }
+
+    @staticmethod
+    def _nanmedian(values: List[float]) -> float:
+        valid = sorted(v for v in values if v is not None and math.isfinite(v))
+        if not valid:
+            return float('nan')
+        n = len(valid)
+        mid = n // 2
+        return valid[mid] if n % 2 == 1 else 0.5 * (valid[mid - 1] + valid[mid])
+
+    @staticmethod
+    def _nanstd(values: List[float]) -> float:
+        valid = [v for v in values if v is not None and math.isfinite(v)]
+        if len(valid) < 2:
+            return 0.0
+        mean = sum(valid) / len(valid)
+        return math.sqrt(sum((v - mean) ** 2 for v in valid) / (len(valid) - 1))
+
+    @classmethod
+    def hampel_filter_series(cls, values: List[float], window_half: int = 3,
+                             n_sigmas: float = 3.0) -> Tuple[List[float], int]:
+        """Apply a running Hampel filter to replace SEU spikes with local medians."""
+        if len(values) < 3:
+            return list(values), 0
+        cleaned = list(values)
+        spikes_repaired = 0
+        n = len(values)
+        k = 1.4826
+        for i in range(n):
+            val = values[i]
+            if val is None or not math.isfinite(val):
+                continue
+            lo = max(0, i - window_half)
+            hi = min(n, i + window_half + 1)
+            window = [values[j] for j in range(lo, hi)
+                      if is_finite_number(values[j])]
+            if len(window) < 3:
+                continue
+            med = cls._nanmedian(window)
+            mad = cls._nanmedian([abs(x - med) for x in window])
+            sigma = k * mad
+            deviation = abs(val - med)
+
+            # A perfectly flat local baseline has MAD == 0.  In that case the
+            # regular Hampel threshold also becomes zero, so the old guard
+            # (sigma > 1e-6) silently missed even extreme isolated spikes.
+            # Use a scale-aware floating-point tolerance only for the zero-MAD
+            # case; any meaningful departure from a flat baseline is a spike.
+            if sigma > 1e-6:
+                is_spike = deviation > n_sigmas * sigma
+            else:
+                flat_tolerance = max(1e-6, abs(med) * 0.05)
+                is_spike = deviation > flat_tolerance
+
+            if is_spike:
+                cleaned[i] = med
+                spikes_repaired += 1
+        return cleaned, spikes_repaired
+
+    @classmethod
+    def despike_solar_wind(cls, samples: List[SolarWindData],
+                           window_half: int = 3,
+                           n_sigmas: float = 3.0) -> Tuple[List[SolarWindData], Dict[str, int]]:
+        """Filter saturation/SEU spikes on SolarWindData before coupling/pressure math."""
+        if not samples:
+            return [], {'total_repaired': 0}
+        ordered = sorted(samples, key=lambda s: s.timestamp)
+        speeds_c, sp_cnt = cls.hampel_filter_series(
+            [s.speed if s.speed is not None and math.isfinite(s.speed) and s.speed > 0 else float('nan') for s in ordered], window_half, n_sigmas)
+        densities_c, dn_cnt = cls.hampel_filter_series(
+            [s.density if s.density is not None and math.isfinite(s.density) and s.density > 0 else float('nan') for s in ordered], window_half, n_sigmas)
+        temps_c, tp_cnt = cls.hampel_filter_series(
+            [s.temperature if s.temperature is not None and math.isfinite(s.temperature) and s.temperature > 0 else float('nan') for s in ordered], window_half, n_sigmas)
+        bzs_c, bz_cnt = cls.hampel_filter_series([s.bz if s.bz is not None and math.isfinite(s.bz) else float('nan') for s in ordered], window_half, n_sigmas)
+        bts_c, bt_cnt = cls.hampel_filter_series(
+            [s.bt if s.bt is not None and math.isfinite(s.bt) and s.bt >= 0 else float('nan') for s in ordered], window_half, n_sigmas)
+        bys_c, by_cnt = cls.hampel_filter_series(
+            [s.by if s.by is not None and math.isfinite(s.by) else float('nan') for s in ordered], window_half, n_sigmas)
+        bxs_c, bx_cnt = cls.hampel_filter_series(
+            [s.bx if s.bx is not None and math.isfinite(s.bx) else float('nan') for s in ordered], window_half, n_sigmas)
+
+        filtered: List[SolarWindData] = []
+        for idx, orig in enumerate(ordered):
+            sp, dn, tp = speeds_c[idx], densities_c[idx], temps_c[idx]
+            bz_val, bt_val, by_val, bx_val = bzs_c[idx], bts_c[idx], bys_c[idx], bxs_c[idx]
+            if math.isfinite(bz_val) and math.isfinite(bt_val) and bt_val < abs(bz_val):
+                bt_val = math.hypot(bz_val, by_val if math.isfinite(by_val) else 0.0)
+            filtered.append(SolarWindData(
+                timestamp=orig.timestamp,
+                speed=sp if math.isfinite(sp) else 0.0,
+                density=dn if math.isfinite(dn) else 0.0,
+                temperature=tp if math.isfinite(tp) else 0.0,
+                bz=bz_val,
+                bt=bt_val if math.isfinite(bt_val) else float('nan'),
+                bx=bx_val if math.isfinite(bx_val) else None,
+                by=by_val if math.isfinite(by_val) else None,
+                source=orig.source,
+                active=orig.active,
+            ))
+        stats = {
+            'speed_spikes': sp_cnt, 'density_spikes': dn_cnt,
+            'temperature_spikes': tp_cnt, 'bz_spikes': bz_cnt, 'bt_spikes': bt_cnt,
+            'total_repaired': sp_cnt + dn_cnt + tp_cnt + bz_cnt + bt_cnt + by_cnt + bx_cnt,
+        }
+        return filtered, stats
+
+    @classmethod
+    def validate_l1_fleet_agreement(
+        cls,
+        store: TelemetryStore,
+        window_minutes: int = 30,
+        thresholds: Optional[Dict[str, float]] = None,
+        reference_time: Optional[datetime] = None,
+    ) -> Dict[str, Any]:
+        """Flag sensor divergence or data corruption across simultaneous L1 spacecraft."""
+        cfg = dict(cls.DEFAULT_THRESHOLDS)
+        if thresholds:
+            cfg.update(thresholds)
+
+        end = reference_time or datetime.now(timezone.utc)
+        start = end - timedelta(minutes=max(5, int(window_minutes)))
+        all_sw = store.get_solar_wind_range(start, end, active_only=False)
+
+        by_source: Dict[str, List[SolarWindData]] = defaultdict(list)
+        active_source = None
+        for sample in all_sw:
+            src = sample.source or 'Unknown'
+            by_source[src].append(sample)
+            if sample.active:
+                active_source = src
+
+        if not by_source:
+            return {
+                'fleet_status': 'NO_DATA', 'divergence_detected': False,
+                'warnings': ['No L1 spacecraft samples in validation window'],
+                'active_source': 'None', 'recommended_source': 'None', 'spacecraft': {},
+            }
+
+        if len(by_source) < 2:
+            only_src = next(iter(by_source))
+            _, spike_stats = cls.despike_solar_wind(by_source[only_src])
+            return {
+                'fleet_status': 'SINGLE_SOURCE', 'divergence_detected': False,
+                'warnings': [], 'active_source': active_source or only_src,
+                'recommended_source': active_source or only_src,
+                'window_minutes': window_minutes,
+                'spacecraft': {
+                    only_src: {
+                        'sample_count': len(by_source[only_src]),
+                        'active': True,
+                        'median_speed': cls._nanmedian([s.speed for s in by_source[only_src] if s.speed is not None and math.isfinite(s.speed) and s.speed > 0]),
+                        'median_density': cls._nanmedian([s.density for s in by_source[only_src] if s.density is not None and math.isfinite(s.density) and s.density > 0]),
+                        'median_bz': cls._nanmedian([s.bz for s in by_source[only_src] if s.bz is not None and math.isfinite(s.bz)]),
+                        'median_bt': cls._nanmedian([s.bt for s in by_source[only_src] if s.bt is not None and math.isfinite(s.bt)]),
+                        'spikes_repaired': spike_stats['total_repaired'],
+                        'quality_score': max(0.0, 100.0 - 5.0 * spike_stats['total_repaired']),
+                    }
+                },
+            }
+
+        spacecraft_metrics: Dict[str, Dict[str, Any]] = {}
+        for src, samples in by_source.items():
+            _, spike_stats = cls.despike_solar_wind(samples)
+            speeds = [s.speed for s in samples if s.speed is not None and math.isfinite(s.speed) and s.speed > 0]
+            densities = [s.density for s in samples if s.density is not None and math.isfinite(s.density) and s.density > 0]
+            bzs = [s.bz for s in samples if s.bz is not None and math.isfinite(s.bz)]
+            bts = [s.bt for s in samples if s.bt is not None and math.isfinite(s.bt) and s.bt >= 0]
+
+            completeness = min(100.0, (len(samples) / max(1.0, float(window_minutes))) * 100.0)
+            spike_penalty = min(50.0, spike_stats['total_repaired'] * 4.0)
+            nan_penalty = 20.0 if (not speeds or not bzs) else 0.0
+            q_score = max(0.0, round(0.6 * completeness + 40.0 - spike_penalty - nan_penalty, 1))
+
+            spacecraft_metrics[src] = {
+                'sample_count': len(samples), 'active': (src == active_source),
+                'median_speed': cls._nanmedian(speeds), 'std_speed': cls._nanstd(speeds),
+                'median_density': cls._nanmedian(densities), 'std_density': cls._nanstd(densities),
+                'median_bz': cls._nanmedian(bzs), 'std_bz': cls._nanstd(bzs),
+                'median_bt': cls._nanmedian(bts),
+                'spikes_repaired': spike_stats['total_repaired'], 'quality_score': q_score,
+            }
+
+        if active_source is None or active_source not in spacecraft_metrics:
+            active_source = max(spacecraft_metrics, key=lambda k: spacecraft_metrics[k]['quality_score'])
+
+        active_stats = spacecraft_metrics[active_source]
+        peer_sources = [s for s in spacecraft_metrics if s != active_source]
+        consensus_speed = cls._nanmedian([spacecraft_metrics[s]['median_speed'] for s in peer_sources
+                                          if math.isfinite(spacecraft_metrics[s]['median_speed'])])
+        consensus_bz = cls._nanmedian([spacecraft_metrics[s]['median_bz'] for s in peer_sources
+                                       if math.isfinite(spacecraft_metrics[s]['median_bz'])])
+        consensus_bt = cls._nanmedian([spacecraft_metrics[s]['median_bt'] for s in peer_sources
+                                       if math.isfinite(spacecraft_metrics[s]['median_bt'])])
+        consensus_density = cls._nanmedian([spacecraft_metrics[s]['median_density'] for s in peer_sources
+                                            if math.isfinite(spacecraft_metrics[s]['median_density'])])
+
+        warnings_list: List[str] = []
+        deltas: Dict[str, Optional[float]] = {'speed_kms': None, 'bz_nt': None, 'bt_nt': None, 'density_cm3': None}
+        z_scores: Dict[str, Optional[float]] = {'speed': None, 'bz': None}
+
+        if math.isfinite(active_stats['median_speed']) and math.isfinite(consensus_speed):
+            dv = abs(active_stats['median_speed'] - consensus_speed)
+            deltas['speed_kms'] = round(dv, 1)
+            z_scores['speed'] = round(dv / max(15.0, active_stats['std_speed']), 2)
+            if dv > cfg['speed_delta_kms']:
+                warnings_list.append(
+                    f"TELEMETRY_DIVERGENCE_WARNING: {active_source} speed "
+                    f"({active_stats['median_speed']:.0f} km/s) diverges from L1 fleet "
+                    f"consensus ({consensus_speed:.0f} km/s) by {dv:.0f} km/s")
+
+        if math.isfinite(active_stats['median_bz']) and math.isfinite(consensus_bz):
+            dbz = abs(active_stats['median_bz'] - consensus_bz)
+            deltas['bz_nt'] = round(dbz, 2)
+            z_scores['bz'] = round(dbz / max(1.5, active_stats['std_bz']), 2)
+            if dbz > cfg['bz_delta_nt']:
+                warnings_list.append(
+                    f"TELEMETRY_DIVERGENCE_WARNING: {active_source} IMF Bz "
+                    f"({active_stats['median_bz']:+.1f} nT) diverges from L1 fleet "
+                    f"consensus ({consensus_bz:+.1f} nT) by {dbz:.1f} nT")
+
+        if math.isfinite(active_stats['median_bt']) and math.isfinite(consensus_bt):
+            dbt = abs(active_stats['median_bt'] - consensus_bt)
+            deltas['bt_nt'] = round(dbt, 2)
+            if dbt > cfg['bt_delta_nt']:
+                warnings_list.append(
+                    f"TELEMETRY_DIVERGENCE_WARNING: {active_source} IMF Bt diverges from L1 fleet by {dbt:.1f} nT")
+
+        if math.isfinite(active_stats['median_density']) and math.isfinite(consensus_density):
+            ddn = abs(active_stats['median_density'] - consensus_density)
+            deltas['density_cm3'] = round(ddn, 2)
+            if ddn > cfg['density_delta_cm3']:
+                warnings_list.append(
+                    f"TELEMETRY_DIVERGENCE_WARNING: {active_source} proton density diverges from L1 fleet by {ddn:.1f} p/cm3")
+
+        divergence_detected = bool(warnings_list)
+        if divergence_detected:
+            spacecraft_metrics[active_source]['quality_score'] = max(
+                0.0, spacecraft_metrics[active_source]['quality_score'] - 35.0)
+        recommended_source = max(spacecraft_metrics, key=lambda k: spacecraft_metrics[k]['quality_score'])
+
+        return {
+            'fleet_status': 'DIVERGENCE_WARNING' if divergence_detected else 'NOMINAL_AGREEMENT',
+            'divergence_detected': divergence_detected,
+            'active_source': active_source, 'recommended_source': recommended_source,
+            'window_minutes': window_minutes, 'deltas': deltas, 'z_scores': z_scores,
+            'warnings': warnings_list, 'spacecraft': spacecraft_metrics,
+        }
+
+
+    @staticmethod
+    def _weighted_median(values: List[float], weights: List[float]) -> float:
+        pairs = sorted((float(v), max(1e-6, float(w))) for v, w in zip(values, weights)
+                       if v is not None and math.isfinite(float(v)))
+        if not pairs:
+            return float('nan')
+        threshold = sum(weight for _, weight in pairs) / 2.0
+        cumulative = 0.0
+        for value, weight in pairs:
+            cumulative += weight
+            if cumulative >= threshold:
+                return value
+        return pairs[-1][0]
+
+    @classmethod
+    def reconcile_l1_consensus(cls, store: TelemetryStore,
+                               window_minutes: int = 30,
+                               reference_time: Optional[datetime] = None) -> Dict[str, Any]:
+        """Return parallel robust L1 consensus diagnostics; do not replace active data."""
+        report = cls.validate_l1_fleet_agreement(
+            store, window_minutes=window_minutes, reference_time=reference_time)
+        spacecraft = report.get('spacecraft') or {}
+        if not spacecraft:
+            return {'available': False, 'consensus_status': 'NO_DATA',
+                    'sources_used': {}, 'spread': {}}
+        field_map = {'speed_kms': 'median_speed', 'density_cm3': 'median_density',
+                     'bz_nt': 'median_bz', 'bt_nt': 'median_bt'}
+        result: Dict[str, Any] = {'available': False,
+            'consensus_status': ('SINGLE_SOURCE' if len(spacecraft) == 1 else
+                'RECONCILED_DIVERGENCE' if report.get('divergence_detected') else
+                'NOMINAL_CONSENSUS'),
+            'recommended_source': report.get('recommended_source'),
+            'sources_used': {}, 'spread': {}}
+        for output_name, source_name in field_map.items():
+            values, weights, used = [], [], []
+            for source, metrics in spacecraft.items():
+                value = metrics.get(source_name)
+                if value is None or not math.isfinite(float(value)):
+                    continue
+                values.append(float(value)); used.append(source)
+                weights.append(max(1.0, float(metrics.get('quality_score', 50.0))))
+            result['sources_used'][output_name] = used
+            if not values:
+                result[output_name] = None
+                result['spread'][output_name + '_mad'] = None
+                result['spread'][output_name + '_range'] = None
+                continue
+            center = cls._weighted_median(values, weights)
+            deviations = [abs(value-center) for value in values]
+            mad = cls._weighted_median(deviations, weights)
+            result[output_name] = round(center, 2)
+            result['spread'][output_name + '_mad'] = round(mad, 2)
+            result['spread'][output_name + '_range'] = round(max(values) - min(values), 2)
+            result['available'] = True
+        return result
+
+
+class ShockAnalyzer:
+    """Experimental characterization of already-observed L1 discontinuities."""
+    GAMMA = 5.0 / 3.0
+    MU0 = 4.0e-7 * math.pi
+    MP_KG = 1.6726219e-27
+    KB_J_K = 1.380649e-23
+
+    @staticmethod
+    def _cross(a, b):
+        return (a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2],
+                a[0]*b[1]-a[1]*b[0])
+
+    @classmethod
+    def magnetic_coplanarity(cls, b1, b2):
+        if not all(is_finite_number(x) for x in (*b1, *b2)):
+            return {'theta_bn_deg': None, 'normal_vector': None,
+                    'normal_status': 'degenerate',
+                    'normal_method': 'magnetic_coplanarity'}
+        db = tuple(float(b2[i])-float(b1[i]) for i in range(3))
+        normal = cls._cross(db, cls._cross(b2, b1))
+        normal_mag = math.sqrt(sum(x*x for x in normal))
+        b1_mag = math.sqrt(sum(float(x)*float(x) for x in b1))
+        cross_mag = math.sqrt(sum(x*x for x in cls._cross(b2, b1)))
+        if (not (math.isfinite(normal_mag) and math.isfinite(b1_mag) and math.isfinite(cross_mag))
+                or normal_mag < 1e-6 or b1_mag < 1e-6 or cross_mag < 1e-6):
+            return {'theta_bn_deg': None, 'normal_vector': None,
+                    'normal_status': 'degenerate',
+                    'normal_method': 'magnetic_coplanarity'}
+        n = tuple(x/normal_mag for x in normal)
+        cosine = min(1.0, abs(sum(float(b1[i])*n[i] for i in range(3)))/b1_mag)
+        return {'theta_bn_deg': round(math.degrees(math.acos(cosine)), 1),
+                'normal_vector': [round(x, 5) for x in n],
+                'normal_status': 'usable',
+                'normal_method': 'magnetic_coplanarity'}
+
+    @classmethod
+    def characterize_l1_discontinuity(cls, solar_wind: List[SolarWindData]):
+        rows = sorted([x for x in solar_wind if x.timestamp], key=lambda x:x.timestamp)
+        if len(rows) < 8:
+            return {'available': False, 'experimental': True,
+                    'reason': 'insufficient_l1_samples'}
+        now = rows[-1].timestamp
+        upstream = [x for x in rows if 10 <= (now-x.timestamp).total_seconds()/60 <= 35]
+        downstream = [x for x in rows if 0 <= (now-x.timestamp).total_seconds()/60 < 10]
+        if len(upstream) < 3 or len(downstream) < 2:
+            return {'available': False, 'experimental': True,
+                    'reason': 'insufficient_upstream_downstream_windows'}
+        med=lambda seq: L1FleetValidator._nanmedian([float(v) for v in seq if is_finite_number(v)])
+        def state(group):
+            return {'speed':med([x.speed for x in group]), 'density':med([x.density for x in group]),
+                    'temperature':med([x.temperature for x in group]), 'bt':med([x.bt for x in group]),
+                    'bx':med([x.bx for x in group]), 'by':med([x.by for x in group]),
+                    'bz':med([x.bz for x in group])}
+        u,d=state(upstream),state(downstream)
+        cop=cls.magnetic_coplanarity((u['bx'],u['by'],u['bz']),(d['bx'],d['by'],d['bz']))
+        density_ratio=(d['density']/u['density']
+                       if is_finite_number(u['density']) and u['density']>0 and is_finite_number(d['density'])
+                       else float('nan'))
+        bt_ratio=(d['bt']/u['bt']
+                  if is_finite_number(u['bt']) and u['bt']>0 and is_finite_number(d['bt'])
+                  else float('nan'))
+        speed_jump=(d['speed']-u['speed']
+                    if is_finite_number(d['speed']) and is_finite_number(u['speed'])
+                    else float('nan'))
+        temp_ratio=(d['temperature']/u['temperature']
+                    if is_finite_number(u['temperature']) and u['temperature']>0 and is_finite_number(d['temperature'])
+                    else float('nan'))
+        detected=(math.isfinite(density_ratio) and density_ratio>=1.4 and
+                  math.isfinite(bt_ratio) and bt_ratio>=1.3 and
+                  math.isfinite(speed_jump) and speed_jump>=35)
+        return {'available': True, 'experimental': True,
+                'product_type': 'observed_l1_discontinuity_characterization',
+                'detection_window_end_utc':now.isoformat(),
+                'newest_sample_age_seconds':round(max(0.0,(datetime.now(timezone.utc)-now).total_seconds()),1),
+                'shock_detected_screening': bool(detected),
+                'density_compression_ratio': round(density_ratio,2) if math.isfinite(density_ratio) else None,
+                'magnetic_compression_ratio': round(bt_ratio,2) if math.isfinite(bt_ratio) else None,
+                'speed_jump_kms': round(speed_jump,1) if math.isfinite(speed_jump) else None,
+                'temperature_ratio': round(temp_ratio,2) if math.isfinite(temp_ratio) else None, **cop,
+                'limitations': ['scalar bulk speed; no full RH closure',
+                                'no pre-L1 CME sheath Bz-sign prediction']}
+
+
+class MagnetosphereCoupling:
+    """Experimental, clock-angle-aware coupling diagnostics."""
+    @staticmethod
+    def compute_metrics(solar_wind: List[SolarWindData], kp: float):
+        if not solar_wind:
+            return {'available': False, 'experimental': True}
+        rows=sorted(solar_wind,key=lambda x:x.timestamp); latest=rows[-1]
+        v=max(0.0,as_float(latest.speed,0.0)); n=max(0.0,as_float(latest.density,0.0))
+        by=as_float(latest.by,0.0); bz=as_float(latest.bz,0.0); bt=math.hypot(by,bz)
+        theta=math.acos(max(-1.0,min(1.0,bz/bt))) if bt>0 else 0.0
+        sh=math.sin(theta/2.0)
+        boyle=1.0e-4*v*v+11.7*bt*sh**3
+        epsilon=2.0e-3*v*bt*bt*sh**4
+        pdyn=1.67e-6*n*v*v
+        prior=[x for x in rows[:-1] if x.timestamp>=latest.timestamp-timedelta(minutes=15)
+               and x.bz is not None and math.isfinite(x.bz)]
+        dbzdt=abs(bz-prior[0].bz)/max(1,(latest.timestamp-prior[0].timestamp).total_seconds()/60) if prior else 0.0
+        erec=1.0e-3*v*bt*sh**2
+        fac=min(10.0,0.45*erec+0.85*math.sqrt(max(0,pdyn))+0.60*dbzdt)
+        observed_kp=as_float(kp,float('nan'))
+        activity_context=('unavailable' if not math.isfinite(observed_kp) else 'storm_level' if observed_kp>=5 else 'active' if observed_kp>=4 else 'quiet_to_unsettled')
+        applicability='extrapolated_strong_driving' if boyle>160 else 'quasi_steady_screening'
+        return {'available': True, 'experimental': True,
+                'newell_coupling': round(latest.coupling,1) if math.isfinite(latest.coupling) else None,
+                'polar_cap_potential_kv': round(boyle,1),
+                'akasofu_epsilon_gw': round(epsilon,1),
+                'fac_activity_index': round(fac,2), 'dbz_dt_nt_per_min':round(dbzdt,3),
+                'observed_kp_context':round(observed_kp,2) if math.isfinite(observed_kp) else None,
+                'activity_context':activity_context, 'fac_alert_context_supported':bool(math.isfinite(observed_kp) and observed_kp>=4),
+                'applicability': applicability, 'saturation_not_modeled': True,
+                'fac_normalization_version':'v5.3-exp1',
+                'note':'Empirical diagnostics; FAC is a normalized screening index, not a current inversion.'}
+
+
+class GeomagneticNowcaster:
+    """1-3h Ahead Dst and Kp Nowcaster & SSC Horizon Detector."""
+
+    def __init__(self, store: TelemetryStore, onnx_model_path: Optional[str] = None):
+        self.store = store
+        self.onnx_model_path = onnx_model_path or os.getenv('SMC_ONNX_NOWCAST_MODEL', '').strip()
+
+    @staticmethod
+    def shue_magnetopause_standoff_re(pdyn_npa: float, bz_nt: float) -> float:
+        p = max(0.1, float(pdyn_npa if math.isfinite(pdyn_npa) and pdyn_npa > 0 else 2.0))
+        bz = float(bz_nt if math.isfinite(bz_nt) else 0.0)
+        return (10.22 + 1.29 * math.tanh(0.184 * (bz + 8.14))) * (p ** (-1.0 / 6.6))
+
+    @classmethod
+    def detect_ssc_and_imf_turning(cls, solar_wind: List[SolarWindData],
+                                   window_minutes: int = 30) -> Dict[str, Any]:
+        if not solar_wind:
+            return {
+                'ssc_horizon_alert': False, 'pdyn_jump_npa': 0.0, 'current_pdyn_npa': 0.0,
+                'magnetopause_standoff_re': 10.5, 'geosynchronous_crossing': False,
+                'summary': 'Insufficient solar wind data for SSC horizon detection',
+            }
+        valid_times = [s.timestamp for s in solar_wind if s.timestamp is not None]
+        if not valid_times:
+            return {
+                'ssc_horizon_alert': False, 'pdyn_jump_npa': 0.0, 'current_pdyn_npa': 0.0,
+                'magnetopause_standoff_re': 10.5, 'geosynchronous_crossing': False,
+                'summary': 'Insufficient solar wind data for SSC horizon detection',
+            }
+        now = max(valid_times)
+        cutoff = now - timedelta(minutes=max(10, int(window_minutes)))
+        recent = [
+            s for s in solar_wind
+            if s.timestamp is not None and s.timestamp >= cutoff
+            and is_finite_number(s.speed) and float(s.speed) > 0
+            and is_finite_number(s.density) and float(s.density) >= 0
+        ]
+        if len(recent) < 2:
+            recent = solar_wind[-10:]
+
+        pdyns = [s.dynamic_pressure for s in recent if is_finite_number(s.dynamic_pressure)]
+        bzs = [float(s.bz) for s in recent if is_finite_number(s.bz)]
+        current_pdyn = pdyns[-1] if pdyns else 0.0
+        min_pdyn = min(pdyns[:-1]) if len(pdyns) > 1 else current_pdyn
+        pdyn_jump = max(0.0, current_pdyn - min_pdyn)
+        current_bz = bzs[-1] if bzs else 0.0
+        max_prev_bz = max(bzs[:-1]) if len(bzs) > 1 else current_bz
+        southward_turning = (current_bz < 0.0) and (max_prev_bz >= 0.0 or (current_bz - max_prev_bz) <= -5.0 or current_bz <= -8.0)
+
+        standoff_re = cls.shue_magnetopause_standoff_re(current_pdyn, current_bz)
+        geo_crossing = standoff_re <= 6.6
+        ssc_alert = (pdyn_jump > 5.0 and current_bz < 0.0) or geo_crossing
+
+        if ssc_alert:
+            summary = (f"SSC_HORIZON_ALERT: Dynamic pressure jumped +{pdyn_jump:.1f} nPa "
+                       f"(peak {current_pdyn:.1f} nPa) with southward IMF (Bz={current_bz:+.1f} nT); "
+                       f"magnetopause compressed to {standoff_re:.1f} R_E")
+            if geo_crossing:
+                summary += " [GEOSYNCHRONOUS MAGNETOPAUSE CROSSING <= 6.6 R_E]"
+        else:
+            summary = (f"Nominal magnetopause standoff {standoff_re:.1f} R_E "
+                       f"(Pdyn={current_pdyn:.1f} nPa, 30m jump +{pdyn_jump:.1f} nPa)")
+
+        return {
+            'ssc_horizon_alert': ssc_alert, 'southward_turning': southward_turning,
+            'pdyn_jump_npa': round(pdyn_jump, 2), 'current_pdyn_npa': round(current_pdyn, 2),
+            'current_bz_nt': round(current_bz, 2), 'magnetopause_standoff_re': round(standoff_re, 2),
+            'geosynchronous_crossing': geo_crossing, 'summary': summary,
+        }
+
+    @staticmethod
+    def _burton_step_dst(dst_now: float, pdyn_now: float, pdyn_prev: float,
+                         v_kms: float, bz_nt: float, dt_hours: float = 1.0) -> float:
+        p_now = max(0.1, pdyn_now if math.isfinite(pdyn_now) and pdyn_now > 0 else 1.8)
+        p_prev = max(0.1, pdyn_prev if math.isfinite(pdyn_prev) and pdyn_prev > 0 else p_now)
+        v = max(250.0, v_kms if math.isfinite(v_kms) and v_kms > 0 else 400.0)
+        bz = bz_nt if math.isfinite(bz_nt) else 0.0
+        ey = 1.0e-3 * v * max(0.0, -bz)
+        q_inj = -4.4 * (ey - 0.49) if ey > 0.49 else 0.0
+        tau = 2.40 * math.exp(9.74 / (4.69 + ey))
+        dst_star = dst_now - 7.26 * math.sqrt(p_prev) + 11.0
+        dst_star_next = dst_star + dt_hours * (q_inj - dst_star / tau)
+        return max(-600.0, min(80.0, dst_star_next + 7.26 * math.sqrt(p_now) - 11.0))
+
+    @staticmethod
+    def _estimate_kp_from_coupling_and_dst(coupling: float, dst_nt: float,
+                                           bz_nt: float, speed_kms: float) -> float:
+        c_val = coupling if (math.isfinite(coupling) and coupling >= 0) else 0.0
+        kp_newell = 0.0 if c_val <= 100.0 else min(9.0, max(0.0, 1.85 * math.log10(c_val / 180.0)))
+        kp_dst = min(9.0, 1.5 + abs(dst_nt) / 38.0) if dst_nt < -15.0 else 0.0
+        kp_sw = min(9.0, max(0.0, (speed_kms - 350.0) / 140.0 + max(0.0, -bz_nt) / 4.5)) if (speed_kms >= 500.0 or bz_nt <= -5.0) else 0.0
+        blended_kp = 0.50 * max(kp_newell, kp_sw) + 0.50 * max(kp_newell, kp_dst)
+        return round(max(0.0, min(9.0, blended_kp)) * 3.0) / 3.0
+
+    def _fit_autoregressive_ridge(self, hourly_vectors: List[Dict[str, float]],
+                                  horizon_hours: int) -> Optional[Tuple[Any, float, Dict[str, Any]]]:
+        """Fit ridge model and, with >=30 pairs, score a chronological 80/20 holdout."""
+        if not HAS_NUMPY or len(hourly_vectors) < 18 + horizon_hours:
+            return None
+        X_rows, y_vals = [], []
+        for idx in range(len(hourly_vectors) - horizon_hours):
+            cur = hourly_vectors[idx]
+            X_rows.append([
+                1.0, cur['dst'], cur['pdyn'], math.sqrt(max(0.0, cur['pdyn'])),
+                cur['bz'], max(0.0, -cur['bz']), cur['speed'] / 1000.0,
+                (cur['speed'] * max(0.0, -cur['bz'])) / 1000.0, cur['coupling'] / 10000.0,
+            ])
+            y_vals.append(hourly_vectors[idx + horizon_hours]['dst'])
+        X = np.asarray(X_rows, dtype=float)
+        y = np.asarray(y_vals, dtype=float)
+        reg = np.eye(X.shape[1], dtype=float) * 2.5
+        reg[0, 0] = 0.0
+        try:
+            metrics: Dict[str, Any] = {
+                'horizon_hours': horizon_hours, 'sample_count': int(len(y)),
+                'validation': 'in_sample_insufficient_history',
+            }
+            if len(y) >= 30:
+                split = max(18, int(len(y) * 0.8))
+                X_tr, y_tr, X_te, y_te = X[:split], y[:split], X[split:], y[split:]
+                train_reg = np.eye(X.shape[1], dtype=float) * 2.5
+                train_reg[0, 0] = 0.0
+                w_tr = np.linalg.solve(X_tr.T @ X_tr + train_reg, X_tr.T @ y_tr)
+                pred_te = X_te @ w_tr
+                persistence_te = X_te[:, 1]
+                errors = y_te - pred_te
+                persistence_errors = y_te - persistence_te
+                mae = float(np.mean(np.abs(errors)))
+                rmse = float(np.sqrt(np.mean(errors ** 2)))
+                persistence_rmse = float(np.sqrt(np.mean(persistence_errors ** 2)))
+                skill = (1.0 - rmse / persistence_rmse) if persistence_rmse > 1e-12 else None
+                metrics.update({
+                    'validation': 'chronological_80_20_holdout',
+                    'train_samples': int(len(y_tr)), 'test_samples': int(len(y_te)),
+                    'mae_nt': round(mae, 3), 'rmse_nt': round(rmse, 3),
+                    'persistence_rmse_nt': round(persistence_rmse, 3),
+                    'skill_score': round(skill, 4) if skill is not None else None,
+                })
+            else:
+                provisional = np.linalg.solve(X.T @ X + reg, X.T @ y)
+                rmse = float(np.sqrt(np.mean((y - X @ provisional) ** 2)))
+                metrics['rmse_nt'] = round(rmse, 3)
+            weights = np.linalg.solve(X.T @ X + reg, X.T @ y)
+            return weights, rmse, metrics
+        except Exception:
+            return None
+
+    def predict(self, lookback_days: int = 14,
+                verification_summary: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        now = datetime.now(timezone.utc)
+        start = now - timedelta(days=max(2, int(lookback_days)))
+        sw_all = self.store.get_solar_wind_range(start, now, active_only=True)
+        if not sw_all:
+            sw_all = self.store.get_solar_wind_range(start, now, active_only=False)
+        sw_clean, _ = L1FleetValidator.despike_solar_wind(sw_all)
+        dst_rows = self.store.get_dst_range(start, now)
+        kp_rows = self.store.get_kp_range(start, now)
+        ssc_info = self.detect_ssc_and_imf_turning(sw_clean[-60:] if sw_clean else [])
+
+        if not sw_clean and not dst_rows:
+            return {
+                'available': False,
+                'model_type': 'unavailable',
+                'training_samples_hours': 0,
+                'inputs': {},
+                'ssc_detection': ssc_info,
+                'predictions': {},
+                'validation_metrics': {},
+            }
+
+        sw_by_hour: Dict[datetime, List[SolarWindData]] = defaultdict(list)
+        for sample in sw_clean:
+            sw_by_hour[sample.timestamp.replace(minute=0, second=0, microsecond=0)].append(sample)
+
+        dst_by_hour: Dict[datetime, float] = {}
+        for row in dst_rows:
+            stamp = parse_swpc_time(row.get('time_tag'))
+            if stamp:
+                dst_by_hour[stamp.replace(minute=0, second=0, microsecond=0)] = as_float(row.get('dst'), 0.0)
+
+        hourly_vectors: List[Dict[str, float]] = []
+        for hr in sorted(set(sw_by_hour.keys()) & set(dst_by_hour.keys())):
+            bucket = sw_by_hour[hr]
+            sp = L1FleetValidator._nanmedian([s.speed for s in bucket if s.speed > 0])
+            dn = L1FleetValidator._nanmedian([s.density for s in bucket if s.density >= 0])
+            bz = L1FleetValidator._nanmedian([s.bz for s in bucket if math.isfinite(s.bz)])
+            cp = L1FleetValidator._nanmedian([s.coupling for s in bucket if math.isfinite(s.coupling)])
+            sp = sp if math.isfinite(sp) else 400.0
+            dn = dn if math.isfinite(dn) else 5.0
+            bz = bz if math.isfinite(bz) else 0.0
+            cp = cp if math.isfinite(cp) else 0.0
+            hourly_vectors.append({
+                'hour': hr, 'dst': dst_by_hour[hr], 'speed': sp, 'density': dn,
+                'pdyn': 1.67e-6 * dn * (sp ** 2), 'bz': bz, 'coupling': cp,
+            })
+
+        recent_sw = sw_clean[-30:] if sw_clean else []
+        cur_speed = L1FleetValidator._nanmedian([float(s.speed) for s in recent_sw if is_finite_number(s.speed) and float(s.speed) > 0])
+        cur_dens = L1FleetValidator._nanmedian([float(s.density) for s in recent_sw if is_finite_number(s.density) and float(s.density) >= 0])
+        cur_bz = L1FleetValidator._nanmedian([float(s.bz) for s in recent_sw if is_finite_number(s.bz)])
+        cur_by = L1FleetValidator._nanmedian([float(s.by) for s in recent_sw if is_finite_number(s.by)])
+        cur_coupling = L1FleetValidator._nanmedian([float(s.coupling) for s in recent_sw if is_finite_number(s.coupling)])
+        cur_speed = cur_speed if math.isfinite(cur_speed) else 400.0
+        cur_dens = cur_dens if math.isfinite(cur_dens) else 5.0
+        cur_bz = cur_bz if math.isfinite(cur_bz) else 0.0
+        cur_by = cur_by if math.isfinite(cur_by) else 0.0
+        cur_coupling = cur_coupling if math.isfinite(cur_coupling) else 0.0
+        cur_pdyn = 1.67e-6 * cur_dens * (cur_speed ** 2)
+        cur_dst = as_float(dst_rows[-1].get('dst'), 0.0) if dst_rows else 0.0
+        cur_kp = as_float(kp_rows[-1].get('kp'), 0.0) if kp_rows else 0.0
+
+        feature_vec = [
+            1.0, cur_dst, cur_pdyn, math.sqrt(max(0.0, cur_pdyn)), cur_bz,
+            max(0.0, -cur_bz), cur_speed / 1000.0,
+            (cur_speed * max(0.0, -cur_bz)) / 1000.0, cur_coupling / 10000.0,
+        ]
+
+        onnx_preds: Dict[int, float] = {}
+        model_type = "BMR-Physical"
+        if self.onnx_model_path and os.path.exists(self.onnx_model_path) and HAS_NUMPY:
+            try:
+                import onnxruntime as ort
+                sess = ort.InferenceSession(self.onnx_model_path)
+                inp_name = sess.get_inputs()[0].name
+                out = sess.run(None, {inp_name: np.asarray([feature_vec[1:]], dtype=np.float32)})[0]
+                for idx, h in enumerate((1, 2, 3)):
+                    if idx < len(out[0]):
+                        onnx_preds[h] = float(out[0][idx])
+                model_type = "ONNX-Hybrid"
+            except Exception:
+                pass
+
+        if verification_summary is None:
+            try:
+                verification_summary = ForecastVerifier(self.store).summarize(window_days=30)
+            except Exception as exc:
+                logging.warning('Conformal metadata unavailable: %s', exc)
+                verification_summary = {'horizons': {}}
+        conformal_horizons = (verification_summary.get('horizons') or {})
+        predictions: Dict[str, Dict[str, Any]] = {}
+        validation_metrics: Dict[str, Dict[str, Any]] = {}
+        running_bmr_dst = cur_dst
+        prev_pdyn = hourly_vectors[-1]['pdyn'] if hourly_vectors else cur_pdyn
+
+        for horizon in (1, 2, 3):
+            bmr_dst = self._burton_step_dst(running_bmr_dst, cur_pdyn, prev_pdyn, cur_speed, cur_bz, 1.0)
+            running_bmr_dst, prev_pdyn = bmr_dst, cur_pdyn
+            ar_fit = self._fit_autoregressive_ridge(hourly_vectors, horizon)
+            if ar_fit is not None and HAS_NUMPY:
+                weights, rmse, fit_metrics = ar_fit
+                validation_metrics[f'{horizon}h'] = fit_metrics
+            if horizon in onnx_preds:
+                pred_dst = 0.70 * onnx_preds[horizon] + 0.30 * bmr_dst
+                uncertainty = 10.0 + 3.0 * horizon
+            elif ar_fit is not None and HAS_NUMPY:
+                ar_dst = max(-600.0, min(80.0, float(np.dot(weights, np.asarray(feature_vec, dtype=float)))))
+                pred_dst = 0.60 * ar_dst + 0.40 * bmr_dst
+                uncertainty = max(6.0, min(35.0, 1.645 * rmse))
+                if model_type == "BMR-Physical":
+                    model_type = f"AR-Ridge+BMR (n={len(hourly_vectors)}h)"
+            else:
+                pred_dst = bmr_dst
+                uncertainty = 12.0 + 4.0 * horizon
+
+            pred_kp = self._estimate_kp_from_coupling_and_dst(cur_coupling, pred_dst, cur_bz, cur_speed)
+            if horizon == 1 and cur_kp > 0:
+                pred_kp = round((0.35 * cur_kp + 0.65 * pred_kp) * 3.0) / 3.0
+
+            target_time = now + timedelta(hours=horizon)
+            verification = conformal_horizons.get(f'{horizon}h') or {}
+            conformal_half_width = verification.get('conformal_p90_half_width_nt')
+            if conformal_half_width is not None:
+                conformal_half_width = max(0.0, min(100.0, float(conformal_half_width)))
+            predictions[f"{horizon}h"] = {
+                'horizon_hours': horizon, 'target_time_utc': target_time.isoformat(),
+                'dst_nt': round(pred_dst, 1),
+                'member_predictions_dst_nt': {
+                    'bmr_physical': round(bmr_dst, 1),
+                    'statistical_or_onnx_hybrid': round(pred_dst, 1),
+                    'persistence': round(cur_dst, 1),
+                },
+                'dst_screening_lower_nt': round(pred_dst - uncertainty, 1),
+                'dst_screening_upper_nt': round(pred_dst + uncertainty, 1),
+                'screening_half_width_nt': round(uncertainty, 1),
+                'dst_conformal_lower_nt': (round(pred_dst - conformal_half_width, 1)
+                                           if conformal_half_width is not None else None),
+                'dst_conformal_upper_nt': (round(pred_dst + conformal_half_width, 1)
+                                           if conformal_half_width is not None else None),
+                'conformal_half_width_nt': conformal_half_width,
+                'calibration_status': verification.get('calibration_status', 'insufficient_samples'),
+                'calibration_sample_count': int(verification.get('calibration_sample_count') or 0),
+                'evaluation_sample_count': int(verification.get('evaluation_sample_count') or 0),
+                'uncertainty_label': (
+                    'Experimental split-conformal 90% interval available alongside screening range'
+                    if conformal_half_width is not None else
+                    'Empirical screening range; not a calibrated prediction interval'),
+                'kp': round(pred_kp, 2),
+                'g_scale': 5 if pred_kp >= 9 else 4 if pred_kp >= 8 else 3 if pred_kp >= 7 else 2 if pred_kp >= 6 else 1 if pred_kp >= 5 else 0,
+            }
+
+        return {
+            'available': True, 'generated_at': now.isoformat(), 'model_type': model_type,
+            'training_samples_hours': len(hourly_vectors),
+            'inputs': {
+                'dst_nt': round(cur_dst, 1), 'kp': round(cur_kp, 2),
+                'pdyn_npa': round(cur_pdyn, 2), 'bz_nt': round(cur_bz, 2),
+                'by_nt': round(cur_by, 2),
+                'speed_kms': round(cur_speed, 1), 'newell_coupling': round(cur_coupling, 1),
+            },
+            'ssc_detection': ssc_info, 'predictions': predictions,
+            'validation_metrics': validation_metrics,
+        }
+
+
+class NowcastEnsemble:
+    """Deterministic input-sensitivity analysis; not a predictive distribution."""
+    @classmethod
+    def run(cls, base_nowcast: Dict[str,Any], l1_consensus: Dict[str,Any]):
+        if not base_nowcast or not base_nowcast.get('available'):
+            return {'available':False,'method':'deterministic_input_sensitivity'}
+        inp=base_nowcast.get('inputs') or {}; spread=(l1_consensus or {}).get('spread') or {}
+        v=as_float(inp.get('speed_kms'),400); bz=as_float(inp.get('bz_nt'),0)
+        by=as_float(inp.get('by_nt'),0); pdyn=max(.1,as_float(inp.get('pdyn_npa'),2)); dst=as_float(inp.get('dst_nt'),0)
+        def scale(mad_key, range_key, floor):
+            mad=as_float(spread.get(mad_key),0); rng=as_float(spread.get(range_key),0)
+            return max(1.4826*mad,0.5*rng,floor)
+        dv=scale('speed_kms_mad','speed_kms_range',max(40,.10*v))
+        dbz=scale('bz_nt_mad','bz_nt_range',3.0); dp=max(.25*pdyn,.3)
+        members=[(0,0,0),(dv,dp,-dbz),(-dv,-dp,dbz),(dv,0,0),(-dv,0,0),(0,dp,-.5*dbz),(0,-dp,.5*dbz)]
+        out={}
+        for h in (1,2,3):
+            values=[]
+            for sv,sp,sb in members:
+                vm=max(250,v+sv); pm=max(.1,pdyn+sp); bzm=bz+sb; running=dst
+                for _ in range(h): running=GeomagneticNowcaster._burton_step_dst(running,pm,pm,vm,bzm,1.0)
+                kp=GeomagneticNowcaster._estimate_kp_from_coupling_and_dst(newell_coupling(vm,by,bzm),running,bzm,vm)
+                values.append((running,kp))
+            ds=[x[0] for x in values]; ks=[x[1] for x in values]
+            out[f'{h}h']={'dst_input_sensitivity_std_nt':round(L1FleetValidator._nanstd(ds),2),
+                           'dst_input_sensitivity_range_nt':round(max(ds)-min(ds),2),
+                           'kp_input_sensitivity_std':round(L1FleetValidator._nanstd(ks),2),
+                           'kp_input_sensitivity_range':round(max(ks)-min(ks),2)}
+        return {'available':True,'experimental':True,'method':'deterministic_input_sensitivity',
+                'member_count':len(members),'perturbation_scales':{'speed_kms':round(dv,1),'pdyn_npa':round(dp,2),'bz_nt':round(dbz,2)},
+                'horizons':out,'note':'Sensitivity is propagated from observed baseline Dst through BMR; it is separate from parent AR/ONNX forecast error and conformal residual uncertainty.'}
+
+
+class ForecastVerifier:
+    """Chronological out-of-sample verification and experimental split conformal calibration."""
+    MIN_DEGRADATION_SAMPLES = 30
+    MIN_CONFORMAL_SAMPLES = 25
+
+    def __init__(self, store: TelemetryStore):
+        self.store = store
+
+    @staticmethod
+    def _score(pairs: List[Dict[str, Any]], interval_half_width: Optional[float] = None) -> Dict[str, Any]:
+        valid = [row for row in pairs if all(math.isfinite(as_float(row.get(key), float('nan')))
+                 for key in ('obs_dst_nt','pred_dst_nt','baseline_dst_nt'))]
+        if not valid:
+            return {'sample_count': 0, 'mae_nt': None, 'rmse_nt': None,
+                    'bias_nt': None, 'persistence_rmse_nt': None,
+                    'skill_score': None, 'empirical_coverage_rate': None}
+        errors = [float(row['pred_dst_nt'])-float(row['obs_dst_nt']) for row in valid]
+        persistence = [float(row['baseline_dst_nt'])-float(row['obs_dst_nt']) for row in valid]
+        n = len(valid)
+        rmse = math.sqrt(sum(error*error for error in errors)/n)
+        persistence_rmse = math.sqrt(sum(error*error for error in persistence)/n)
+        coverage = None
+        if interval_half_width is not None:
+            coverage = sum(abs(error) <= interval_half_width for error in errors)/n
+        else:
+            available = [row for row in valid if math.isfinite(as_float(row.get('interval_lower_dst_nt'), float('nan')))
+                         and math.isfinite(as_float(row.get('interval_upper_dst_nt'), float('nan')))]
+            if available:
+                coverage = sum(float(row['interval_lower_dst_nt']) <= float(row['obs_dst_nt']) <=
+                    float(row['interval_upper_dst_nt']) for row in available)/len(available)
+        return {'sample_count': n, 'mae_nt': round(sum(abs(e) for e in errors)/n,3),
+                'rmse_nt': round(rmse,3), 'bias_nt': round(sum(errors)/n,3),
+                'persistence_rmse_nt': round(persistence_rmse,3),
+                'skill_score': round(1-rmse/persistence_rmse,4) if persistence_rmse > 1e-9 else None,
+                'empirical_coverage_rate': round(coverage,3) if coverage is not None else None}
+
+    @staticmethod
+    def _compute_roc_auc(pairs, threshold=-50.0):
+        valid=[r for r in pairs if math.isfinite(as_float(r.get('obs_dst_nt'),float('nan'))) and math.isfinite(as_float(r.get('pred_dst_nt'),float('nan')))]
+        pos=[-float(r['pred_dst_nt']) for r in valid if float(r['obs_dst_nt'])<=threshold]
+        neg=[-float(r['pred_dst_nt']) for r in valid if float(r['obs_dst_nt'])>threshold]
+        if not pos: return {'roc_auc':None,'roc_status':'no_positive_events_in_window','positive_events':0,'negative_events':len(neg)}
+        if not neg: return {'roc_auc':None,'roc_status':'no_negative_events_in_window','positive_events':len(pos),'negative_events':0}
+        wins=sum(1 if p>n else .5 if p==n else 0 for p in pos for n in neg)
+        return {'roc_auc':round(wins/(len(pos)*len(neg)),4),'roc_status':'computed','positive_events':len(pos),'negative_events':len(neg)}
+
+    @classmethod
+    def _compute_reliability(cls,calibration,evaluation):
+        cal=sorted(abs(float(r['pred_dst_nt'])-float(r['obs_dst_nt'])) for r in calibration
+                   if is_finite_number(r.get('pred_dst_nt')) and is_finite_number(r.get('obs_dst_nt')))
+        ev=[abs(float(r['pred_dst_nt'])-float(r['obs_dst_nt'])) for r in evaluation
+            if is_finite_number(r.get('pred_dst_nt')) and is_finite_number(r.get('obs_dst_nt'))]
+        if len(cal)<cls.MIN_CONFORMAL_SAMPLES: return {'reliability_status':'insufficient_calibration_samples','curve':[]}
+        if len(ev)<5: return {'reliability_status':'insufficient_evaluation_samples','curve':[]}
+        curve=[]
+        for nominal in (.50,.60,.70,.80,.90,.95):
+            q=cal[min(len(cal)-1,max(0,math.ceil((len(cal)+1)*nominal)-1))]
+            empirical=sum(x<=q for x in ev)/len(ev); curve.append({'nominal':nominal,'empirical':round(empirical,3),'half_width_nt':round(q,2)})
+        xs=[x['nominal'] for x in curve]; ys=[x['empirical'] for x in curve]; mx=sum(xs)/len(xs); my=sum(ys)/len(ys)
+        den=sum((x-mx)**2 for x in xs); slope=sum((x-mx)*(y-my) for x,y in zip(xs,ys))/den
+        intercept=my-slope*mx; errors=[abs(x-y) for x,y in zip(xs,ys)]
+        return {'reliability_status':'computed_experimental','reliability_slope':round(slope,4),'reliability_intercept':round(intercept,4),
+                'mace':round(sum(errors)/len(errors),4),'max_coverage_error':round(max(errors),4),'curve':curve}
+
+    @staticmethod
+    def _kp_method_score(rows: List[Dict[str, Any]], field: str) -> Dict[str, Any]:
+        pairs=[(float(r[field]),float(r['observed_kp'])) for r in rows
+               if math.isfinite(as_float(r.get(field),float('nan')))
+               and math.isfinite(as_float(r.get('observed_kp'),float('nan')))]
+        if not pairs:
+            return {'sample_count':0,'mae':None,'rmse':None,'bias':None,
+                    'correlation':None,'g1_precision':None,'g1_recall':None,
+                    'g1_f1':None,'g1_brier':None}
+        errors=[p-o for p,o in pairs]; n=len(pairs)
+        mp=sum(p for p,_ in pairs)/n; mo=sum(o for _,o in pairs)/n
+        cov=sum((p-mp)*(o-mo) for p,o in pairs)
+        vp=sum((p-mp)**2 for p,_ in pairs); vo=sum((o-mo)**2 for _,o in pairs)
+        corr=cov/math.sqrt(vp*vo) if vp>0 and vo>0 else None
+        tp=sum(p>=5 and o>=5 for p,o in pairs); fp=sum(p>=5 and o<5 for p,o in pairs)
+        fn=sum(p<5 and o>=5 for p,o in pairs)
+        precision=tp/(tp+fp) if tp+fp else None; recall=tp/(tp+fn) if tp+fn else None
+        f1=2*precision*recall/(precision+recall) if precision is not None and recall is not None and precision+recall else None
+        # Kp is deterministic, so threshold output is scored as 0/1 Brier.
+        brier=sum(((1.0 if p>=5 else 0.0)-(1.0 if o>=5 else 0.0))**2 for p,o in pairs)/n
+        return {'sample_count':n,'mae':round(sum(abs(e) for e in errors)/n,4),
+                'rmse':round(math.sqrt(sum(e*e for e in errors)/n),4),
+                'bias':round(sum(errors)/n,4),
+                'correlation':round(corr,4) if corr is not None else None,
+                'g1_precision':round(precision,4) if precision is not None else None,
+                'g1_recall':round(recall,4) if recall is not None else None,
+                'g1_f1':round(f1,4) if f1 is not None else None,
+                'g1_brier':round(brier,4),'g1_threshold_kp':5.0}
+
+    @staticmethod
+    def _kp_bootstrap_skill(rows: List[Dict[str, Any]], field: str,
+                            iterations: int = 1000) -> Dict[str, Any]:
+        """Deterministic bootstrap CI for MAE skill over persistence."""
+        if len(rows)<10: return {'mae_skill_vs_persistence':None,'ci95':None,'status':'insufficient_samples'}
+        base=sum(abs(float(r['persistence_kp'])-float(r['observed_kp'])) for r in rows)/len(rows)
+        model=sum(abs(float(r[field])-float(r['observed_kp'])) for r in rows)/len(rows)
+        skill=1-model/base if base>1e-12 else None
+        if skill is None: return {'mae_skill_vs_persistence':None,'ci95':None,'status':'zero_persistence_error'}
+        import random
+        rng=random.Random(5301+sum(ord(c) for c in field)); vals=[]; n=len(rows)
+        for _ in range(max(100,int(iterations))):
+            sample=[rows[rng.randrange(n)] for _ in range(n)]
+            b=sum(abs(float(r['persistence_kp'])-float(r['observed_kp'])) for r in sample)/n
+            if b<=1e-12: continue
+            m=sum(abs(float(r[field])-float(r['observed_kp'])) for r in sample)/n
+            vals.append(1-m/b)
+        vals.sort()
+        if not vals: return {'mae_skill_vs_persistence':round(skill,4),'ci95':None,'status':'bootstrap_unavailable'}
+        lo=vals[int(.025*(len(vals)-1))]; hi=vals[int(.975*(len(vals)-1))]
+        return {'mae_skill_vs_persistence':round(skill,4),'ci95':[round(lo,4),round(hi,4)],
+                'status':'computed','bootstrap_iterations':len(vals)}
+
+    def summarize_kp_three_way(self, window_days: int = 90,
+                               reference_time: Optional[datetime] = None) -> Dict[str, Any]:
+        now=reference_time or datetime.now(timezone.utc)
+        rows=self.store.get_aligned_kp_verification_rows(now-timedelta(days=max(1,int(window_days))),now)
+        methods={'smc':self._kp_method_score(rows,'smc_kp'),
+                 'noaa_swpc':self._kp_method_score(rows,'noaa_kp'),
+                 'issuance_time_persistence':self._kp_method_score(rows,'persistence_kp')}
+        methods['smc'].update(self._kp_bootstrap_skill(rows,'smc_kp'))
+        methods['noaa_swpc'].update(self._kp_bootstrap_skill(rows,'noaa_kp'))
+        ranked=sorted(((v['mae'],k) for k,v in methods.items() if v.get('mae') is not None))
+        for rank,(_,name) in enumerate(ranked,1): methods[name]['mae_rank']=rank
+        winners={metric:(min((v[metric],k) for k,v in methods.items() if v.get(metric) is not None)[1]
+                         if any(v.get(metric) is not None for v in methods.values()) else None)
+                 for metric in ('mae','rmse')}
+        return {'generated_at':now.isoformat(),'window_days':int(window_days),
+                'alignment':'canonical_utc_3h_bins_[00,03,06,09,12,15,18,21)',
+                'common_target_count':len(rows),'methods':methods,'winners':winners,
+                'leakage_controls':{
+                    'smc_issued_before_target_bin':True,
+                    'noaa_available_by_smc_issuance':True,
+                    'persistence_observed_by_smc_issuance':True,
+                    'common_target_intersection':True},
+                'rows':rows}
+
+    def summarize(self, window_days: int = 30,
+                  reference_time: Optional[datetime] = None) -> Dict[str, Any]:
+        now = reference_time or datetime.now(timezone.utc)
+        start = now - timedelta(days=max(1, int(window_days)))
+        horizons, degraded = {}, []
+        for horizon in (1, 2, 3):
+            pairs = self.store.get_verified_nowcast_pairs(start, now, horizon)
+            split = int(len(pairs) * 0.7)
+            calibration = pairs[:split]
+            raw_evaluation = pairs[split:]
+            last_calibration_observation = None
+            if calibration:
+                last_calibration_observation = parse_swpc_time(
+                    calibration[-1].get('observation_time') or
+                    calibration[-1].get('target_time'))
+            evaluation = []
+            for row in raw_evaluation:
+                issued = parse_swpc_time(row.get('issued_at'))
+                if (issued is not None and
+                        (last_calibration_observation is None or
+                         issued > last_calibration_observation)):
+                    evaluation.append(row)
+            half_width = None
+            status = 'insufficient_samples'
+            residuals = [
+                abs(float(row['pred_dst_nt']) - float(row['obs_dst_nt']))
+                for row in calibration
+                if math.isfinite(as_float(row.get('pred_dst_nt'), float('nan')))
+                and math.isfinite(as_float(row.get('obs_dst_nt'), float('nan')))
+            ]
+            if len(residuals) >= self.MIN_CONFORMAL_SAMPLES:
+                residuals.sort()
+                index = min(len(residuals) - 1,
+                    max(0, math.ceil((len(residuals) + 1) * 0.90) - 1))
+                half_width = round(residuals[index], 2)
+                status = 'experimental_split_conformal_90pct'
+            full_metrics = self._score(pairs, None)
+            full_metrics.update(self._compute_roc_auc(pairs))
+            full_metrics.update(self._compute_reliability(calibration, evaluation))
+            interval_metrics = (self._score(evaluation, half_width)
+                                if half_width is not None and evaluation else
+                                {'empirical_coverage_rate': None})
+            full_metrics.update({
+                'archive_sample_count': len(pairs),
+                'calibration_sample_count': len(calibration),
+                'evaluation_sample_count': len(evaluation),
+                'screening_coverage_rate': full_metrics.get('empirical_coverage_rate'),
+                'conformal_evaluation_coverage_rate': interval_metrics.get('empirical_coverage_rate'),
+                'empirical_coverage_rate': interval_metrics.get('empirical_coverage_rate'),
+                'conformal_p90_half_width_nt': half_width,
+                'calibration_status': status,
+                'last_calibration_observation_time': (
+                    last_calibration_observation.isoformat()
+                    if last_calibration_observation else None),
+                'degraded_below_persistence': (
+                    full_metrics['sample_count'] >= self.MIN_DEGRADATION_SAMPLES
+                    and full_metrics.get('skill_score') is not None
+                    and full_metrics['skill_score'] < 0),
+            })
+            if full_metrics['degraded_below_persistence']:
+                degraded.append(f'{horizon}h')
+            horizons[f'{horizon}h'] = full_metrics
+        return {
+            'generated_at': now.isoformat(), 'window_days': int(window_days),
+            'degradation_alert': bool(degraded), 'degraded_horizons': degraded,
+            'horizons': horizons,
+        }
+
+class StereoABeaconClient:
+    """Fetches STEREO-A beacon telemetry/imagery and performs 3D CME de-projection."""
+
+    def __init__(self, api: 'SpaceWeatherAPI'):
+        self.api = api
+
+    @staticmethod
+    def estimate_stereo_a_separation_deg(when: Optional[datetime] = None) -> float:
+        stamp = when or datetime.now(timezone.utc)
+        conjunction_epoch = datetime(2023, 8, 12, 0, 0, tzinfo=timezone.utc)
+        years_since = (stamp - conjunction_epoch).total_seconds() / (365.25 * 86400.0)
+        sep = (years_since * 22.14) % 360.0
+        return sep if sep <= 180.0 else sep - 360.0
+
+    def fetch_beacon_solar_wind(self) -> Dict[str, Any]:
+        mag_url = ENDPOINTS.get('stereo_a_mag', '').strip()
+        wind_url = ENDPOINTS.get('stereo_a_plastic', '').strip()
+        telemetry_configured = bool(mag_url or wind_url)
+        mag_rows = self.api._get(mag_url, cache_minutes=5, retries=1) if mag_url else []
+        wind_rows = self.api._get(wind_url, cache_minutes=5, retries=1) if wind_url else []
+        mag_rows = mag_rows or []
+        wind_rows = wind_rows or []
+        sep_deg = self.estimate_stereo_a_separation_deg()
+        latest_speed = latest_density = latest_bz = latest_bt = float('nan')
+        latest_stamp = None
+
+        if isinstance(wind_rows, list) and wind_rows:
+            for row in reversed(wind_rows):
+                if not isinstance(row, dict):
+                    continue
+                sp = as_float(get_key(row, 'proton_speed', 'speed', 'bulk_speed'), float('nan'))
+                dn = as_float(get_key(row, 'proton_density', 'density'), float('nan'))
+                if math.isfinite(sp) and sp > 0:
+                    latest_speed, latest_density = sp, dn
+                    latest_stamp = parse_swpc_time(get_key(row, 'time_tag', 'timestamp'))
+                    break
+
+        if isinstance(mag_rows, list) and mag_rows:
+            for row in reversed(mag_rows):
+                if not isinstance(row, dict):
+                    continue
+                bz = as_float(get_key(row, 'bz_gsm', 'bz_rtn', 'bn', 'bz'), float('nan'))
+                bt = as_float(get_key(row, 'bt', 'b_total'), float('nan'))
+                if math.isfinite(bz) or math.isfinite(bt):
+                    latest_bz, latest_bt = bz, bt
+                    if latest_stamp is None:
+                        latest_stamp = parse_swpc_time(get_key(row, 'time_tag', 'timestamp'))
+                    break
+
+        return {
+            'available': bool(math.isfinite(latest_speed) or math.isfinite(latest_bt)),
+            'configured': telemetry_configured,
+            'telemetry_status': ('AVAILABLE' if bool(math.isfinite(latest_speed) or math.isfinite(latest_bt))
+                                 else 'UNAVAILABLE' if telemetry_configured else 'UNCONFIGURED'),
+            'configuration_note': (None if telemetry_configured else
+                'No verified STEREO-A MAG/PLASTIC JSON endpoints are configured.'),
+            'timestamp': latest_stamp.isoformat() if latest_stamp else None,
+            'hee_longitude_deg': round(sep_deg, 2),
+            'speed_kms': round(latest_speed, 1) if math.isfinite(latest_speed) else None,
+            'density_cm3': round(latest_density, 2) if math.isfinite(latest_density) else None,
+            'bz_nt': round(latest_bz, 2) if math.isfinite(latest_bz) else None,
+            'bt_nt': round(latest_bt, 2) if math.isfinite(latest_bt) else None,
+        }
+
+    def deproject_cme_stereoscopic(self, cme: CME,
+                                   aggregator: 'SpaceWeatherAggregator') -> Optional[Dict[str, Any]]:
+        if not cme.speed or cme.speed <= 0:
+            return None
+        v_pos = float(cme.speed)
+        lon_deg = float(cme.longitude) if cme.longitude is not None else 0.0
+        lat_deg = float(cme.latitude) if cme.latitude is not None else 0.0
+        half_angle = max(15.0, min(90.0, float(cme.half_angle) if cme.half_angle is not None else 35.0))
+        sep_deg = self.estimate_stereo_a_separation_deg(cme.start_time)
+
+        central_angle_rad = math.radians(math.hypot(lon_deg, lat_deg))
+        half_rad = math.radians(half_angle)
+        stereo_view_angle_rad = math.radians(abs(sep_deg - lon_deg))
+        projection_factor = max(0.62, min(1.0, math.sin(central_angle_rad) * 0.65 + math.sin(half_rad) * 0.72))
+        if abs(lon_deg) <= 45.0 and math.sin(stereo_view_angle_rad) >= 0.35:
+            v_3d = v_pos / projection_factor
+        else:
+            v_3d = max(v_pos, v_pos / max(0.75, math.cos(math.radians(min(40.0, abs(lon_deg))))))
+
+        v_3d = min(3500.0, round(v_3d, 1))
+        eta_pos = aggregator.estimate_cme_eta(cme)
+        eta_3d = aggregator.estimate_cme_eta(replace(cme, speed=v_3d, estimated_arrival=None))
+        eta_shift_hours = round((eta_3d - eta_pos).total_seconds() / 3600.0, 1) if (eta_pos and eta_3d) else None
+
+        return {
+            'start_time_utc': cme.start_time.isoformat(),
+            'is_earth_directed': cme.is_earth_directed,
+            'source_lon_deg': lon_deg, 'source_lat_deg': lat_deg, 'half_angle_deg': half_angle,
+            'stereo_a_separation_deg': round(sep_deg, 1),
+            'v_pos_kms': round(v_pos, 1), 'v_3d_deprojected_kms': v_3d,
+            'projection_bias_kms': round(v_3d - v_pos, 1),
+            'eta_pos_utc': eta_pos.isoformat() if eta_pos else None,
+            'eta_3d_utc': eta_3d.isoformat() if eta_3d else None,
+            'eta_shift_hours': eta_shift_hours,
+        }
+
+
+
+class OperationalNowcastSkillMonitor:
+    """Evaluate recent verified skill and emit advisory recommendations."""
+
+    def __init__(self, store: TelemetryStore, degradation_threshold: float = -0.05,
+                 minimum_samples: int = 20):
+        self.store = store
+        self.degradation_threshold = float(degradation_threshold)
+        self.minimum_samples = max(1, int(minimum_samples))
+
+    def evaluate_and_recommend(
+        self, window_days: int = 30,
+        verification_summary: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        summary = (verification_summary
+                   if isinstance(verification_summary, dict) and 'horizons' in verification_summary
+                   else ForecastVerifier(self.store).summarize(window_days=window_days))
+        recommendations: Dict[str, Dict[str, Any]] = {}
+        for horizon, metrics in (summary.get('horizons') or {}).items():
+            count = int(metrics.get('sample_count') or 0)
+            skill = metrics.get('skill_score')
+            if skill is None or count < self.minimum_samples:
+                continue
+            degraded = float(skill) < self.degradation_threshold
+            recommendations[horizon] = {
+                'skill_score': float(skill),
+                'status': 'degraded' if degraded else 'good',
+                'recommended_action': ('review_training_window_and_member_weights'
+                                       if degraded else 'keep_current_model'),
+                'sample_count': count,
+            }
+        return {
+            'window_days': int(window_days),
+            'generated_at': datetime.now(timezone.utc).isoformat(),
+            'degradation_threshold': self.degradation_threshold,
+            'recommendations': recommendations,
+            'overall_degraded': any(
+                row['status'] == 'degraded' for row in recommendations.values()),
+            'advisory_only': True,
+        }
+
+
+class OperationalNowcastEnsemble:
+    """Blend real BMR, hybrid/ridge, and persistence forecast members."""
+
+    def __init__(self, store: TelemetryStore):
+        self.store = store
+        self.nowcaster = GeomagneticNowcaster(store)
+
+    def predict(
+        self, lookback_days: int = 14,
+        verification_summary: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        base = self.nowcaster.predict(
+            lookback_days=lookback_days,
+            verification_summary=verification_summary,
+        )
+        if not base.get('available'):
+            return base
+        for pred in (base.get('predictions') or {}).values():
+            members = pred.get('member_predictions_dst_nt') or {}
+            values = [float(v) for v in members.values()
+                      if v is not None and math.isfinite(as_float(v, float('nan')))]
+            if not values:
+                continue
+            mean = sum(values) / len(values)
+            if len(values) > 1:
+                variance = sum((v - mean) ** 2 for v in values) / (len(values) - 1)
+                std = math.sqrt(max(0.0, variance))
+            else:
+                std = float(pred.get('screening_half_width_nt') or 8.0)
+            pred.update({
+                'ensemble_mean_dst_nt': round(mean, 1),
+                'ensemble_std_dst_nt': round(std, 1),
+                'ensemble_lower_68_nt': round(mean - std, 1),
+                'ensemble_upper_68_nt': round(mean + std, 1),
+                'ensemble_member_count': len(values),
+            })
+        base['model_type'] = str(base.get('model_type', 'BMR')) + ' + Ensemble'
+        base['ensemble'] = True
+        try:
+            report = OperationalNowcastSkillMonitor(self.store).evaluate_and_recommend(
+                30, verification_summary=verification_summary)
+        except Exception as exc:
+            logging.warning('Nowcast skill monitoring failed: %s', exc)
+            report = {'overall_degraded': False, 'error': type(exc).__name__}
+        base['skill_monitor'] = report
+        if report.get('overall_degraded'):
+            logging.warning('Nowcast skill degraded: %s', report)
+        return base
+
 @dataclass
 class DataQuality:
     """Data quality metrics for each source"""
@@ -1056,6 +3203,8 @@ class DataQuality:
     def status(self) -> str:
         if any(flag.startswith("UNAVAILABLE") for flag in self.flags):
             return "Unavailable"
+        if any(flag.startswith("DEGRADED") for flag in self.flags):
+            return "Degraded"
         score = self.overall_score
         if score >= 90:
             return "Excellent"
@@ -1067,6 +3216,177 @@ class DataQuality:
             return "Critical"
 
 
+@dataclass(frozen=True)
+class ReportSnapshot:
+    """One internally consistent, serializable view of a completed acquisition run."""
+    schema_version: str
+    software_version: str
+    run_id: str
+    run_id_short: str
+    generated_at: datetime
+    conditions: Dict[str, Any]
+    risk: Dict[str, Any]
+    outlook: Dict[str, Any]
+    events: Dict[str, Any]
+    threats: List[Any]
+    source_health: Dict[str, Any]
+    plates: Tuple[Dict[str, Any], ...] = ()
+    risk_model: Dict[str, Any] = field(default_factory=dict)
+
+    _json_value = staticmethod(json_safe_value)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return self._json_value({
+            'schema_version': self.schema_version,
+            'software_version': self.software_version,
+            'author': {'name': AUTHOR_NAME, 'email': AUTHOR_EMAIL},
+            'copyright': COPYRIGHT_NOTICE,
+            'rights_notice': CODE_RIGHTS_NOTICE,
+            'run_id': self.run_id,
+            'run_id_short': self.run_id_short,
+            'generated_at': self.generated_at,
+            'conditions': self.conditions,
+            'risk': self.risk,
+            'outlook': self.outlook,
+            'events': self.events,
+            'threats': self.threats,
+            'source_health': self.source_health,
+            'plates': self.plates,
+            'risk_model': self.risk_model,
+        })
+
+
+def write_snapshot_json(snapshot: ReportSnapshot, output_dir: str,
+                        filename: str = 'report_snapshot.json') -> str:
+    """Atomically publish a JSON snapshot after serialization succeeds."""
+    os.makedirs(output_dir, exist_ok=True)
+    path = os.path.join(output_dir, filename)
+    temporary = f'{path}.tmp-{os.getpid()}-{uuid.uuid4().hex[:8]}'
+    try:
+        with open(temporary, 'w', encoding='utf-8') as handle:
+            json.dump(snapshot.to_dict(), handle, indent=2, sort_keys=True,
+                      ensure_ascii=False, allow_nan=False)
+            handle.write('\n')
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            try:
+                os.remove(temporary)
+            except OSError:
+                pass
+    print(f'  JSON snapshot written: {path}')
+    return path
+
+
+# ============================================================================
+# APPLICATION CONFIGURATION
+# ============================================================================
+
+@dataclass
+class GeneralConfig:
+    hours_back: int = 48
+    hours_forward: int = 48
+    loop_interval: int = 0
+    output_dir: str = "swrl_report"
+    api_key: str = NASA_API_KEY
+    retention_days: int = 180
+    export_parquet: bool = False
+    serve_http: bool = False
+    serve_host: str = "127.0.0.1"
+    serve_port: int = 8080
+
+@dataclass
+class VisualizerConfig:
+    with_plots: bool = True
+    with_images: bool = True
+    write_html: bool = True
+    write_json: bool = True
+    write_pdf: bool = False
+    interactive: bool = True
+    width: int = DEFAULT_OUTPUT_WIDTH
+    height: int = DEFAULT_OUTPUT_HEIGHT
+    dpi: int = DEFAULT_OUTPUT_DPI
+
+@dataclass
+class ScienceContextConfig:
+    enable_psp: bool = True
+    enable_lyra: bool = True
+    enable_wispr: bool = False
+    psp_days: int = 30
+    psp_series_days: int = 2
+    psp_lag_days: int = 120
+    psp_timeout: int = 120
+    wispr_days: Optional[int] = None
+    psp_products: List[str] = field(default_factory=list)
+
+@dataclass
+class AlertConfig:
+    webhook_url: str = ""
+    discord_webhook_url: str = ""
+    slack_webhook_url: str = ""
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+    pagerduty_routing_key: str = ""
+    escalate_only: bool = False
+    cooldown_minutes: int = 60
+    dry_run: bool = False
+
+@dataclass
+class AppConfig:
+    general: GeneralConfig = field(default_factory=GeneralConfig)
+    visuals: VisualizerConfig = field(default_factory=VisualizerConfig)
+    science: ScienceContextConfig = field(default_factory=ScienceContextConfig)
+    alerts: AlertConfig = field(default_factory=AlertConfig)
+
+    @classmethod
+    def load(cls, file_path: Optional[str] = None) -> 'AppConfig':
+        config = cls()
+        if not file_path:
+            return config
+        path = Path(file_path).expanduser()
+        if not path.exists():
+            return config
+        suffix = path.suffix.lower()
+        if suffix == '.toml':
+            if tomllib is None:
+                raise RuntimeError("TOML requires Python 3.11+ or the 'tomli' package")
+            with path.open('rb') as handle:
+                data = tomllib.load(handle)
+        elif suffix == '.json':
+            with path.open('r', encoding='utf-8') as handle:
+                data = json.load(handle)
+        else:
+            raise ValueError('Configuration file must use .toml or .json')
+        if not isinstance(data, dict):
+            raise ValueError('Configuration root must be an object/table')
+        sections = {'general': config.general, 'visuals': config.visuals,
+                    'science': config.science, 'alerts': config.alerts}
+        for section_name, target in sections.items():
+            values = data.get(section_name, {})
+            if not isinstance(values, dict):
+                raise ValueError(f'Configuration section {section_name!r} must be a table/object')
+            for key, value in values.items():
+                if not hasattr(target, key):
+                    raise ValueError(f'Unknown configuration option: {section_name}.{key}')
+                setattr(target, key, value)
+        config.validate()
+        return config
+
+    def validate(self) -> None:
+        if not 1 <= int(self.general.hours_back) <= 720:
+            raise ValueError('general.hours_back must be 1..720')
+        if not 0 <= int(self.general.hours_forward) <= 168:
+            raise ValueError('general.hours_forward must be 0..168')
+        if int(self.general.loop_interval) < 0:
+            raise ValueError('general.loop_interval must be non-negative')
+        if int(self.visuals.width) <= 0 or int(self.visuals.height) <= 0:
+            raise ValueError('visual dimensions must be positive')
+        if int(self.visuals.dpi) <= 0:
+            raise ValueError('visuals.dpi must be positive')
+        if not isinstance(self.science.psp_products, list):
+            raise ValueError('science.psp_products must be a list')
 # ============================================================================
 # API CLIENT CLASS
 # ============================================================================
@@ -1074,9 +3394,11 @@ class DataQuality:
 class SpaceWeatherAPI:
     """Handles all API requests to space weather data sources"""
 
-    def __init__(self, nasa_api_key: str = NASA_API_KEY, timeout: int = 30):
+    def __init__(self, nasa_api_key: str = NASA_API_KEY, timeout: int = 30,
+                 sleep_fn=None):
         self.nasa_api_key = nasa_api_key
         self.timeout = timeout
+        self._sleep = sleep_fn or time.sleep
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': f'SolarMissionControl/{VERSION}',
@@ -1084,37 +3406,130 @@ class SpaceWeatherAPI:
         })
         self._cache = {}
         self._cache_expiry = {}
+        self._cache_requests_since_purge = 0
+        self._cache_purge_interval = 32
+        self.async_session = None
         self.active_sw_source = "Unknown"
         self.last_request_error: Optional[str] = None
         self.donki_cooldown_until: Optional[datetime] = None
         self.recent_alert_messages: List[Dict] = []
         self.historical_alert_messages: List[Dict] = []
-        # A direct load_psp_product() call now uses the same explicit default
-        # as the CLI path instead of relying on a getattr fallback.
         self.psp_loader_timeout = 120
-        # At most one unresolved PSP loader may exist. Python threads cannot be
-        # killed safely, so a timed-out worker is quarantined and all later PSP
-        # requests are skipped until it exits. This prevents worker accumulation
-        # and concurrent mutation of pytplot's process-global store.
         self._psp_worker_lock = threading.Lock()
         self._psp_active_worker: Optional[threading.Thread] = None
         self._psp_active_label: Optional[str] = None
+
+    def _purge_expired_cache(self, now: Optional[datetime] = None,
+                             force: bool = False) -> int:
+        """Remove expired cache entries so long-running loop mode stays bounded."""
+        self._cache_requests_since_purge += 1
+        if not force and self._cache_requests_since_purge < self._cache_purge_interval:
+            return 0
+        self._cache_requests_since_purge = 0
+        now = now or datetime.now(timezone.utc)
+        expired = [
+            key for key, expiry in list(self._cache_expiry.items())
+            if not isinstance(expiry, datetime) or expiry <= now
+        ]
+        for key in expired:
+            self._cache.pop(key, None)
+            self._cache_expiry.pop(key, None)
+        for key in list(self._cache_expiry):
+            if key not in self._cache:
+                self._cache_expiry.pop(key, None)
+        for key in list(self._cache):
+            if key not in self._cache_expiry:
+                self._cache.pop(key, None)
+        return len(expired)
+
+    async def init_async_session(self) -> None:
+        if not HAS_AIOHTTP:
+            raise RuntimeError("aiohttp is not installed")
+        if self.async_session is None or self.async_session.closed:
+            timeout_cfg = aiohttp.ClientTimeout(total=self.timeout)
+            connector = aiohttp.TCPConnector(limit=20, ttl_dns_cache=300)
+            self.async_session = aiohttp.ClientSession(
+                headers=dict(self.session.headers), timeout=timeout_cfg,
+                connector=connector)
+
+    async def close_async_session(self) -> None:
+        if self.async_session is not None and not self.async_session.closed:
+            await self.async_session.close()
+        self.async_session = None
+
+    async def _get_async(self, url: str, params: Dict = None,
+                         cache_minutes: int = 5, retries: int = 2) -> Optional[Any]:
+        params = dict(params or {})
+        cache_now = datetime.now(timezone.utc)
+        self._purge_expired_cache(cache_now)
+        is_donki = '/DONKI-API/' in url or 'api.nasa.gov/DONKI' in url
+        if '/DONKI-API/' in url:
+            params.pop('api_key', None)
+        if (is_donki and self.donki_cooldown_until and
+                cache_now < self.donki_cooldown_until):
+            self.last_request_error = 'HTTP 429 cooldown active'
+            return None
+        cache_key = f"{url}:{json.dumps(params, sort_keys=True)}"
+        expiry = self._cache_expiry.get(
+            cache_key, datetime.min.replace(tzinfo=timezone.utc))
+        if cache_key in self._cache and cache_now < expiry:
+            return self._cache[cache_key]
+        await self.init_async_session()
+        for attempt in range(retries + 1):
+            try:
+                async with self.async_session.get(url, params=params) as response:
+                    if response.status == 429:
+                        raw_retry = response.headers.get('Retry-After', '').strip()
+                        try:
+                            delay = max(1.0, float(raw_retry))
+                        except ValueError:
+                            delay = min(10.0, 2.0 ** attempt)
+                        if is_donki:
+                            self.donki_cooldown_until = (
+                                datetime.now(timezone.utc) + timedelta(seconds=delay))
+                        self.last_request_error = 'HTTP 429'
+                        return None
+                    if 500 <= response.status < 600 and attempt < retries:
+                        await asyncio.sleep(min(10.0, 2.0 ** attempt))
+                        continue
+                    if response.status != 200:
+                        self.last_request_error = f'HTTP {response.status}'
+                        return None
+                    text = await response.text()
+                    content_type = response.headers.get('Content-Type', '').lower()
+                    if 'json' not in content_type and not text.lstrip().startswith(('[', '{')):
+                        self.last_request_error = 'Unexpected non-JSON response'
+                        return None
+                    data = json.loads(text)
+                    self._cache[cache_key] = data
+                    self._cache_expiry[cache_key] = (
+                        datetime.now(timezone.utc) + timedelta(minutes=cache_minutes))
+                    return data
+            except (asyncio.TimeoutError, json.JSONDecodeError,
+                    aiohttp.ClientError) as exc:
+                self.last_request_error = type(exc).__name__
+                if attempt < retries:
+                    await asyncio.sleep(min(10.0, 2.0 ** attempt))
+                    continue
+                return None
+        return None
 
     def _get(self, url: str, params: Dict = None, cache_minutes: int = 5,
              retries: int = 3) -> Optional[Any]:
         """Cached JSON GET with bounded retries, content checks and secret-safe errors."""
         params = dict(params or {})
+        cache_now = datetime.now(timezone.utc)
+        self._purge_expired_cache(cache_now)
         is_donki = ('/DONKI-API/' in url or 'api.nasa.gov/DONKI' in url)
-        # The CCMC DONKI API moved on 2026-09-30 and does not use the old
-        # api.nasa.gov gateway key in its query string.
         if '/DONKI-API/' in url:
             params.pop('api_key', None)
         self.last_request_error = None
         if (is_donki and self.donki_cooldown_until and
                 datetime.now(timezone.utc) < self.donki_cooldown_until):
+            self.last_request_error = 'HTTP 429 cooldown active'
             return None
         cache_key = f"{url}:{json.dumps(params, sort_keys=True)}"
-        if cache_key in self._cache and datetime.now() < self._cache_expiry.get(cache_key, datetime.min):
+        if cache_key in self._cache and cache_now < self._cache_expiry.get(cache_key, datetime.min.replace(tzinfo=timezone.utc)):
             return self._cache[cache_key]
         safe_params = dict(params)
         if 'api_key' in safe_params:
@@ -1137,25 +3552,24 @@ class SpaceWeatherAPI:
                     if is_donki:
                         self.donki_cooldown_until = datetime.now(timezone.utc) + timedelta(seconds=delay)
                     if is_notebook:
-                        print(f"API rate limited (429); DONKI marked unavailable for this run.")
+                        print("API rate limited (429); DONKI marked unavailable for this run.")
                         return None
                     if attempt < retries:
                         print(f"API rate limited (429); retrying in {delay:.0f}s...")
-                        time.sleep(delay)
+                        self._sleep(delay)
                         continue
                     print(f"API Error ({safe_target}): HTTPError, HTTP 429")
                     return None
                 if 500 <= status < 600 and attempt < retries:
                     delay = min(max_delay, 2.0 ** attempt)
                     print(f"API temporarily unavailable ({status}); retrying in {delay:.0f}s...")
-                    time.sleep(delay); continue
+                    self._sleep(delay)
+                    continue
                 response.raise_for_status()
                 content_type = response.headers.get('Content-Type', '').lower()
                 if 'json' not in content_type and not response.text.lstrip().startswith(('[', '{')):
                     self.last_request_error = f"Unexpected content type: {content_type or 'unknown'}"
                     if is_donki:
-                        # Do not suppress the remaining DONKI event classes. A
-                        # proxy or maintenance page can affect one route only.
                         print(f"  DONKI endpoint returned non-JSON content ({content_type or 'unknown'}); continuing with the remaining DONKI endpoints.")
                     else:
                         print(f"API Error ({safe_target}): {self.last_request_error}")
@@ -1167,30 +3581,34 @@ class SpaceWeatherAPI:
                     print(f"API Error ({safe_target}): Invalid JSON response")
                     return None
                 self._cache[cache_key] = data
-                self._cache_expiry[cache_key] = datetime.now() + timedelta(minutes=cache_minutes)
+                self._cache_expiry[cache_key] = datetime.now(timezone.utc) + timedelta(minutes=cache_minutes)
                 return data
             except requests.exceptions.RequestException as exc:
                 status = getattr(getattr(exc, 'response', None), 'status_code', None)
                 self.last_request_error = f"{type(exc).__name__}" + (f" HTTP {status}" if status else '')
-                # Authentication, route, and provider errors belong to the
-                # individual endpoint. Only HTTP 429 activates shared cooldown.
                 transient = status is None or status >= 500
                 if transient and attempt < retries:
                     delay = min(max_delay, 2.0 ** attempt)
                     print(f"API request failed; retrying in {delay:.0f}s: {type(exc).__name__}")
-                    time.sleep(delay); continue
+                    self._sleep(delay)
+                    continue
                 print(f"API Error ({safe_target}): {self.last_request_error}")
                 return None
         return None
 
     def fetch_image(self, url: str, timeout: Optional[int] = None) -> Optional[Tuple[bytes, str]]:
-        """Download an image safely and return its bytes and MIME type.
-
-        Image retrieval is deliberately separate from the JSON request path.
-        Invalid responses return None so optional imagery cannot stop a report.
-        """
+        """Download an image safely with browser-compatible image Accept headers."""
+        headers = {
+            'User-Agent': f'Mozilla/5.0 SolarMissionControl/{VERSION}',
+            'Accept': 'image/avif,image/webp,image/apng,image/jpeg,image/png,image/*,*/*;q=0.8',
+        }
+        if 'stereo-ssc.nascom.nasa.gov' in str(url):
+            headers['Referer'] = 'https://stereo-ssc.nascom.nasa.gov/'
         try:
-            response = self.session.get(url, timeout=timeout or self.timeout)
+            try:
+                response = self.session.get(url, headers=headers, timeout=timeout or self.timeout)
+            except TypeError:
+                response = self.session.get(url, timeout=timeout or self.timeout)
             response.raise_for_status()
             content = response.content
             content_type = response.headers.get('Content-Type', '').split(';', 1)[0].lower()
@@ -1211,15 +3629,10 @@ class SpaceWeatherAPI:
         """Fetch GOES X-ray flux data"""
         endpoint = ENDPOINTS['swpc_xray_3day'] if days > 1 else ENDPOINTS['swpc_xray_1min']
         data = self._get(endpoint)
-
         if not data:
             return []
 
-        # The GOES x-ray file emits TWO records per timestamp, one per
-        # energy channel (0.05-0.4 nm and 0.1-0.8 nm). Records are
-        # grouped by timestamp and each channel written to its own field.
         by_time: Dict[str, Dict[str, float]] = defaultdict(dict)
-
         for item in data:
             if not isinstance(item, dict):
                 continue
@@ -1228,7 +3641,6 @@ class SpaceWeatherAPI:
                 continue
             flux = as_float(item.get('flux'))
             energy = str(item.get('energy', ''))
-
             if '0.05' in energy:
                 by_time[time_tag]['short'] = flux
             elif '0.1' in energy or '0.8' in energy:
@@ -1247,14 +3659,12 @@ class SpaceWeatherAPI:
                 flux_long=fluxes.get('long', 0.0),
                 source="GOES"
             ))
-
         return sorted(results, key=lambda x: x.timestamp)
 
     def get_proton_data(self, days: int = 1) -> List[ProtonData]:
         """Fetch GOES proton flux data"""
         endpoint = ENDPOINTS['swpc_protons_3day'] if days > 1 else ENDPOINTS['swpc_protons']
         data = self._get(endpoint)
-
         if not data:
             return []
 
@@ -1266,9 +3676,6 @@ class SpaceWeatherAPI:
                 timestamp = item['time_tag']
                 energy = str(item.get('energy', ''))
                 flux = as_float(item.get('flux'))
-
-                # Order matters: the 100 MeV label is '>=100 MeV' and
-                # would otherwise be captured by the '10' branch.
                 if '100' in energy:
                     by_time[timestamp]['flux_100mev'] = flux
                 elif '50' in energy:
@@ -1290,29 +3697,29 @@ class SpaceWeatherAPI:
                 flux_100mev=fluxes.get('flux_100mev', 0.0),
                 source="GOES"
             ))
-
         return sorted(results, key=lambda x: x.timestamp)
 
     def get_kp_index(self) -> List[Dict]:
         """Fetch current and recent Kp index values"""
         data = self._get(ENDPOINTS['swpc_kp'])
-
         rows = normalise_swpc_product(data)
         if not rows:
             return []
-
         results = []
         for row in rows:
             time_tag = get_key(row, 'time_tag')
             if not time_tag:
                 continue
+            kp_val = as_float(get_key(row, 'Kp', 'kp', 'kp_index'), float('nan'))
+            if not math.isfinite(kp_val):
+                continue
+            kp_frac = as_float(get_key(row, 'Kp_fraction', 'kp_fraction'), float('nan'))
             results.append({
                 'time_tag': time_tag,
-                'kp': as_float(get_key(row, 'Kp', 'kp', 'kp_index')),
-                'kp_fraction': as_float(get_key(row, 'Kp_fraction', 'kp_fraction')),
+                'kp': kp_val,
+                'kp_fraction': kp_frac if math.isfinite(kp_frac) else kp_val,
                 'observed': get_key(row, 'observed', default='observed')
             })
-
         return results
 
     def get_kp_forecast(self) -> List[Dict]:
@@ -1321,7 +3728,6 @@ class SpaceWeatherAPI:
         rows = normalise_swpc_product(data)
         if not rows:
             return []
-
         now = datetime.now(timezone.utc)
         earliest = now - timedelta(hours=3)
         latest = now + timedelta(days=4)
@@ -1331,13 +3737,15 @@ class SpaceWeatherAPI:
             stamp = parse_swpc_time(time_tag)
             if stamp is None or stamp < earliest or stamp > latest:
                 continue
+            kp_val = as_float(get_key(row, 'kp', 'Kp', 'kp_index'), float('nan'))
+            if not math.isfinite(kp_val):
+                continue
             results.append({
                 'time_tag': time_tag,
-                'kp': as_float(get_key(row, 'kp', 'Kp', 'kp_index')),
+                'kp': kp_val,
                 'observed': get_key(row, 'observed', default='predicted'),
                 '_timestamp': stamp,
             })
-
         results.sort(key=lambda item: item['_timestamp'])
         for item in results:
             item.pop('_timestamp', None)
@@ -1347,7 +3755,8 @@ class SpaceWeatherAPI:
         """Return currently effective SWPC messages and retain recent/history groups."""
         data = self._get(ENDPOINTS['swpc_alerts'])
         rows = [item for item in (data or []) if isinstance(item, dict)]
-        now = datetime.now(timezone.utc); recent_cutoff = now - timedelta(hours=72)
+        now = datetime.now(timezone.utc)
+        recent_cutoff = now - timedelta(hours=72)
         active, recent, historical = [], [], []
         for item in rows:
             text = str(get_key(item, 'message', 'product_text', default=''))
@@ -1371,50 +3780,60 @@ class SpaceWeatherAPI:
     def get_dst_index(self) -> List[Dict]:
         """Fetch Dst index data"""
         data = self._get(ENDPOINTS['swpc_dst'])
-
         rows = normalise_swpc_product(data)
         if not rows:
             return []
-
         results = []
         for row in rows:
             time_tag = get_key(row, 'time_tag')
             if not time_tag:
                 continue
+            dst_val = as_float(get_key(row, 'dst', 'Dst'), float('nan'))
+            if not math.isfinite(dst_val):
+                continue
             results.append({
                 'time_tag': time_tag,
-                'dst': as_float(get_key(row, 'dst', 'Dst'))
+                'dst': dst_val
             })
-
         return results
 
     def get_flare_probabilities(self) -> Dict:
+        """Return canonical SWPC flare/proton probabilities from current or legacy layouts."""
         data = self._get(ENDPOINTS['swpc_flare_prob'])
         if not data:
             return {}
         if isinstance(data, dict):
-            return data
-        if isinstance(data, list) and data and isinstance(data[0], dict):
-            prob_keys = set()
-            for row in data:
-                for k, v in row.items():
-                    try:
-                        float(v)
-                        prob_keys.add(str(k))
-                    except Exception:
-                        pass
-            aggregated = {}
-            for key in prob_keys:
-                values = []
-                for row in data:
-                    try:
-                        values.append(float(row.get(key, 0) or 0))
-                    except Exception:
-                        pass
-                aggregated[key] = max(values) if values else 0.0
-            return aggregated
-        return {}
-
+            nested = next((data.get(key) for key in ('data', 'rows', 'probabilities')
+                           if isinstance(data.get(key), list)), None)
+            rows = normalise_swpc_product(nested) if nested is not None else [data]
+        elif isinstance(data, list) and any(isinstance(row, dict) for row in data):
+            rows = [row for row in data if isinstance(row, dict)]
+        else:
+            rows = normalise_swpc_product(data)
+        rows = [row for row in rows if isinstance(row, dict)]
+        aliases = {
+            'c_class_1_day': {'c_class_1_day','class_c_1_day','c_class','class_c','c'},
+            'm_class_1_day': {'m_class_1_day','class_m_1_day','m_class','class_m','m'},
+            'x_class_1_day': {'x_class_1_day','class_x_1_day','x_class','class_x','x'},
+            '10mev_protons_1_day': {'10mev_protons_1_day','10_mev_protons_1_day',
+                                    'proton_1_day','protons_1_day','proton','s1_or_greater'},
+        }
+        normalize = lambda value: re.sub(r'_+', '_', re.sub(
+            r'[^a-z0-9]+', '_', str(value).strip().lower())).strip('_')
+        lookup = {alias: canonical for canonical, names in aliases.items() for alias in names}
+        values = {canonical: [] for canonical in aliases}
+        for row in rows:
+            for raw_key, raw_value in row.items():
+                canonical = lookup.get(normalize(raw_key))
+                if canonical is None or raw_value in (None, ''):
+                    continue
+                try:
+                    probability = float(raw_value)
+                except (TypeError, ValueError):
+                    continue
+                if math.isfinite(probability) and 0.0 <= probability <= 100.0:
+                    values[canonical].append(probability)
+        return {key: max(samples) for key, samples in values.items() if samples}
 
     def get_f107_series(self) -> List[Dict]:
         """Return the monthly F10.7 series with a centered 13-month smooth."""
@@ -1438,7 +3857,6 @@ class SpaceWeatherAPI:
 
     @staticmethod
     def _magnetic_complexity_flag(mag_class: str) -> str:
-        """Normalize NOAA magnetic classes to an operational complexity flag."""
         value = (mag_class or '').upper().replace(' ', '')
         if 'D' in value or 'DELTA' in value:
             return 'HIGH (delta-bearing)'
@@ -1476,42 +3894,25 @@ class SpaceWeatherAPI:
             }
         return sorted(by_number.values(), key=lambda r: (-r['m_probability'], -r['x_probability'], -r['area'], r['region']))
 
-    # ------------------------------------------------------------------
-    # Real-Time Solar Wind (RTSW) - L1 fleet
-    # ------------------------------------------------------------------
-
     def get_rtsw_solar_wind(self, active_only: bool = True) -> List[SolarWindData]:
-        '''
-        Fetch real-time solar wind from the RTSW L1 fleet.
-
-        Parameters
-        ----------
-        active_only : bool
-            If True, keep only records SWPC flagged as operational.
-            Set False to see every spacecraft for comparison.
-
-        Returns
-        -------
-        List of SolarWindData sorted by time.
-        '''
+        """Fetch real-time solar wind from the RTSW L1 fleet."""
         mag_data = self._get(ENDPOINTS['rtsw_mag'])
         wind_data = self._get(ENDPOINTS['rtsw_wind'])
-
         if not mag_data and not wind_data:
             return []
 
-        # Index the magnetometer records by (time_tag, source).
         mag_by_key: Dict[Tuple[str, str], Dict] = {}
         if isinstance(mag_data, list):
             for item in mag_data:
                 if not isinstance(item, dict):
                     continue
                 key = (str(item.get('time_tag')), str(item.get('source')))
+                missing = float('nan')
                 mag_by_key[key] = {
-                    'bx': as_float(item.get('bx_gsm')),
-                    'by': as_float(item.get('by_gsm')),
-                    'bz': as_float(item.get('bz_gsm')),
-                    'bt': as_float(item.get('bt')),
+                    'bx': as_float(item.get('bx_gsm'), missing),
+                    'by': as_float(item.get('by_gsm'), missing),
+                    'bz': as_float(item.get('bz_gsm'), missing),
+                    'bt': as_float(item.get('bt'), missing),
                 }
 
         results = []
@@ -1519,21 +3920,15 @@ class SpaceWeatherAPI:
             for item in wind_data:
                 if not isinstance(item, dict):
                     continue
-
                 is_active = as_bool(item.get('active'), default=False)
                 if active_only and not is_active:
                     continue
-
                 timestamp = parse_swpc_time(item.get('time_tag'))
                 if timestamp is None:
                     continue
-
                 source = str(item.get('source', 'RTSW'))
                 mag = mag_by_key.get((str(item.get('time_tag')), source), {})
-                # Preserve an unmatched magnetic sample as missing data.
-                # Using zero would falsely imply a measured quiet IMF.
                 missing = float('nan')
-
                 results.append(SolarWindData(
                     timestamp=timestamp,
                     speed=as_float(item.get('proton_speed')),
@@ -1548,15 +3943,10 @@ class SpaceWeatherAPI:
                 ))
 
         results.sort(key=lambda x: x.timestamp)
-
         if results:
-            self.active_sw_source = results[-1].source
-
+            active_rows = [r for r in results if r.active]
+            self.active_sw_source = (active_rows[-1].source if active_rows else results[-1].source)
         return results
-
-    # ------------------------------------------------------------------
-    # NASA DONKI Data
-    # ------------------------------------------------------------------
 
     def get_donki_flares(self, start_date: datetime, end_date: datetime) -> List[SolarFlare]:
         """Fetch solar flare data from NASA DONKI"""
@@ -1565,9 +3955,7 @@ class SpaceWeatherAPI:
             'endDate': end_date.strftime('%Y-%m-%d'),
             'api_key': self.nasa_api_key
         }
-
         data = self._get(ENDPOINTS['donki_flr'], params, cache_minutes=15)
-
         if not data or not isinstance(data, list):
             return []
 
@@ -1579,26 +3967,18 @@ class SpaceWeatherAPI:
                 start_time = parse_swpc_time(item.get('beginTime'))
                 if start_time is None:
                     continue
-
                 peak_time = parse_swpc_time(item.get('peakTime'))
                 end_time = parse_swpc_time(item.get('endTime'))
-
                 class_type = item.get('classType') or 'Unknown'
                 intensity = self._parse_flare_intensity(class_type)
-
                 results.append(SolarFlare(
-                    start_time=start_time,
-                    peak_time=peak_time,
-                    end_time=end_time,
-                    class_type=class_type,
-                    intensity=intensity,
+                    start_time=start_time, peak_time=peak_time, end_time=end_time,
+                    class_type=class_type, intensity=intensity,
                     location=item.get('sourceLocation'),
-                    active_region=item.get('activeRegionNum'),
-                    source="DONKI"
+                    active_region=item.get('activeRegionNum'), source="DONKI"
                 ))
             except (ValueError, KeyError, TypeError):
                 continue
-
         return sorted(results, key=lambda x: x.start_time, reverse=True)
 
     def get_donki_cmes(self, start_date: datetime, end_date: datetime) -> List[CME]:
@@ -1608,9 +3988,7 @@ class SpaceWeatherAPI:
             'endDate': end_date.strftime('%Y-%m-%d'),
             'api_key': self.nasa_api_key
         }
-
         data = self._get(ENDPOINTS['donki_cme'], params, cache_minutes=15)
-
         if not data or not isinstance(data, list):
             return []
 
@@ -1622,24 +4000,18 @@ class SpaceWeatherAPI:
                 start_time = parse_swpc_time(item.get('startTime'))
                 if start_time is None:
                     continue
-
                 analyses = item.get('cmeAnalyses') or []
                 speed = 0.0
-                half_angle = None
-                latitude = None
-                longitude = None
+                half_angle = latitude = longitude = estimated_arrival = None
                 is_earth_directed = False
-                estimated_arrival = None
                 note = item.get('note') or ''
                 cme_type = note[:50] if note else 'Unknown'
 
                 if analyses:
                     analysis = next(
-                        (an for an in analyses
-                         if isinstance(an, dict) and an.get('isMostAccurate')),
+                        (an for an in analyses if isinstance(an, dict) and an.get('isMostAccurate')),
                         analyses[-1]
                     )
-
                     speed = as_float(analysis.get('speed'))
                     half_angle = (as_float(analysis.get('halfAngle'))
                                   if analysis.get('halfAngle') is not None else None)
@@ -1648,10 +4020,6 @@ class SpaceWeatherAPI:
                     longitude = (as_float(analysis.get('longitude'))
                                  if analysis.get('longitude') is not None else None)
                     cme_type = analysis.get('type', cme_type)
-
-                    # Earth-directed flag is set ONLY by a WSA-Enlil
-                    # predicted arrival at Earth or by the source
-                    # longitude test below.
                     enlil = analysis.get('enlilList') or []
                     for e in enlil:
                         if not isinstance(e, dict):
@@ -1668,20 +4036,14 @@ class SpaceWeatherAPI:
                     is_earth_directed = True
 
                 results.append(CME(
-                    start_time=start_time,
-                    speed=speed,
-                    half_angle=half_angle,
-                    latitude=latitude,
-                    longitude=longitude,
-                    cme_type=cme_type,
+                    start_time=start_time, speed=speed, half_angle=half_angle,
+                    latitude=latitude, longitude=longitude, cme_type=cme_type,
                     is_earth_directed=is_earth_directed,
                     estimated_arrival=estimated_arrival,
-                    source="DONKI",
-                    note=note[:100]
+                    source="DONKI", note=note[:100]
                 ))
             except (ValueError, KeyError, TypeError):
                 continue
-
         return sorted(results, key=lambda x: x.start_time, reverse=True)
 
     def get_donki_geomagnetic_storms(self, start_date: datetime,
@@ -1692,9 +4054,7 @@ class SpaceWeatherAPI:
             'endDate': end_date.strftime('%Y-%m-%d'),
             'api_key': self.nasa_api_key
         }
-
         data = self._get(ENDPOINTS['donki_gst'], params, cache_minutes=15)
-
         if not data or not isinstance(data, list):
             return []
 
@@ -1706,49 +4066,369 @@ class SpaceWeatherAPI:
                 start_time = parse_swpc_time(item.get('startTime'))
                 if start_time is None:
                     continue
-
                 kp_indices = item.get('allKpIndex') or []
                 max_kp = 0.0
                 for kp in kp_indices:
                     if not isinstance(kp, dict):
                         continue
-                    kp_val = as_float(kp.get('kpIndex'))
-                    max_kp = max(max_kp, kp_val)
-
+                    max_kp = max(max_kp, as_float(kp.get('kpIndex')))
                 results.append(GeomagneticStorm(
-                    start_time=start_time,
-                    kp_index=max_kp,
-                    g_scale=self._kp_to_g_scale(max_kp),
-                    source="DONKI"
+                    start_time=start_time, kp_index=max_kp,
+                    g_scale=self._kp_to_g_scale(max_kp), source="DONKI"
                 ))
             except (ValueError, KeyError, TypeError):
                 continue
-
         return sorted(results, key=lambda x: x.start_time, reverse=True)
 
     @staticmethod
+    def _extract_donki_instruments(item: Dict[str, Any]) -> Tuple[str, ...]:
+        instruments = item.get('instruments') or []
+        names = []
+        for inst in instruments:
+            if isinstance(inst, dict):
+                name = str(inst.get('displayName') or inst.get('id') or '').strip()
+                if name:
+                    names.append(name)
+            elif isinstance(inst, str) and inst.strip():
+                names.append(inst.strip())
+        return tuple(names)
+
+    @staticmethod
+    def _extract_donki_linked_events(item: Dict[str, Any]) -> Tuple[str, ...]:
+        linked = item.get('linkedEvents') or []
+        ids = []
+        for entry in linked:
+            if isinstance(entry, dict):
+                act_id = str(entry.get('activityID') or '').strip()
+                if act_id:
+                    ids.append(act_id)
+            elif isinstance(entry, str) and entry.strip():
+                ids.append(entry.strip())
+        return tuple(ids)
+
+    def get_donki_cme_analyses(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        most_accurate_only: bool = True,
+        speed: float = 0,
+        half_angle: float = 0,
+        catalog: str = 'ALL',
+    ) -> List[Dict[str, Any]]:
+        """Fetch standalone CMEAnalysis records from CCMC DONKI."""
+        params = {
+            'startDate': start_date.strftime('%Y-%m-%d'),
+            'endDate': end_date.strftime('%Y-%m-%d'),
+            'mostAccurateOnly': 'true' if most_accurate_only else 'false',
+            'speed': speed,
+            'halfAngle': half_angle,
+            'catalog': catalog,
+            'api_key': self.nasa_api_key,
+        }
+        data = self._get(ENDPOINTS['donki_cme_analysis'], params, cache_minutes=15)
+        if not data or not isinstance(data, list):
+            return []
+        results: List[Dict[str, Any]] = []
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            analysis_time = parse_swpc_time(item.get('time21_5'))
+            if analysis_time is None:
+                continue
+            results.append({
+                'time21_5': analysis_time.isoformat(),
+                'associated_cme_id': str(item.get('associatedCMEID') or ''),
+                'speed': as_float(item.get('speed')),
+                'type': str(item.get('type') or 'Unknown'),
+                'is_most_accurate': as_bool(item.get('isMostAccurate'), default=False),
+                'latitude': as_float(item.get('latitude'), float('nan')) if item.get('latitude') is not None else None,
+                'longitude': as_float(item.get('longitude'), float('nan')) if item.get('longitude') is not None else None,
+                'half_angle': as_float(item.get('halfAngle'), float('nan')) if item.get('halfAngle') is not None else None,
+                'catalog': str(item.get('catalog') or 'ALL'),
+                'link': str(item.get('link') or ''),
+            })
+        return results
+
+    def get_donki_ips(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        location: str = 'ALL',
+        catalog: str = 'ALL',
+    ) -> List[InterplanetaryShock]:
+        """Fetch Interplanetary Shock (IPS) events from CCMC DONKI."""
+        params = {
+            'startDate': start_date.strftime('%Y-%m-%d'),
+            'endDate': end_date.strftime('%Y-%m-%d'),
+            'location': location,
+            'catalog': catalog,
+            'api_key': self.nasa_api_key,
+        }
+        data = self._get(ENDPOINTS['donki_ips'], params, cache_minutes=15)
+        if not data or not isinstance(data, list):
+            return []
+        results: List[InterplanetaryShock] = []
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            event_time = parse_swpc_time(item.get('eventTime'))
+            if event_time is None:
+                continue
+            activity_id = str(item.get('activityID') or f"IPS-{event_time.isoformat()}").strip()
+            results.append(InterplanetaryShock(
+                activity_id=activity_id,
+                event_time=event_time,
+                location=str(item.get('location') or 'Earth'),
+                catalog=str(item.get('catalog') or 'M2M_CATALOG'),
+                instruments=self._extract_donki_instruments(item),
+                linked_event_ids=self._extract_donki_linked_events(item),
+                submission_time=parse_swpc_time(item.get('submissionTime')),
+                link=str(item.get('link') or ''),
+                source='DONKI',
+            ))
+        return sorted(results, key=lambda x: x.event_time, reverse=True)
+
+    def get_donki_sep(self, start_date: datetime, end_date: datetime) -> List[SolarEnergeticParticle]:
+        """Fetch Solar Energetic Particle (SEP) events from CCMC DONKI."""
+        params = {
+            'startDate': start_date.strftime('%Y-%m-%d'),
+            'endDate': end_date.strftime('%Y-%m-%d'),
+            'api_key': self.nasa_api_key,
+        }
+        data = self._get(ENDPOINTS['donki_sep'], params, cache_minutes=15)
+        if not data or not isinstance(data, list):
+            return []
+        results: List[SolarEnergeticParticle] = []
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            event_time = parse_swpc_time(item.get('eventTime'))
+            if event_time is None:
+                continue
+            sep_id = str(item.get('sepID') or item.get('activityID') or f"SEP-{event_time.isoformat()}").strip()
+            results.append(SolarEnergeticParticle(
+                sep_id=sep_id,
+                event_time=event_time,
+                instruments=self._extract_donki_instruments(item),
+                linked_event_ids=self._extract_donki_linked_events(item),
+                submission_time=parse_swpc_time(item.get('submissionTime')),
+                link=str(item.get('link') or ''),
+                source='DONKI',
+            ))
+        return sorted(results, key=lambda x: x.event_time, reverse=True)
+
+    def get_donki_hss(self, start_date: datetime, end_date: datetime) -> List[HighSpeedStream]:
+        """Fetch High-Speed Stream (HSS) events from CCMC DONKI."""
+        params = {
+            'startDate': start_date.strftime('%Y-%m-%d'),
+            'endDate': end_date.strftime('%Y-%m-%d'),
+            'api_key': self.nasa_api_key,
+        }
+        data = self._get(ENDPOINTS['donki_hss'], params, cache_minutes=15)
+        if not data or not isinstance(data, list):
+            return []
+        results: List[HighSpeedStream] = []
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            event_time = parse_swpc_time(item.get('eventTime'))
+            if event_time is None:
+                continue
+            hss_id = str(item.get('hssID') or item.get('activityID') or f"HSS-{event_time.isoformat()}").strip()
+            results.append(HighSpeedStream(
+                hss_id=hss_id,
+                event_time=event_time,
+                instruments=self._extract_donki_instruments(item),
+                linked_event_ids=self._extract_donki_linked_events(item),
+                submission_time=parse_swpc_time(item.get('submissionTime')),
+                link=str(item.get('link') or ''),
+                source='DONKI',
+            ))
+        return sorted(results, key=lambda x: x.event_time, reverse=True)
+
+    def get_donki_wsa_enlil(self, start_date: datetime, end_date: datetime) -> List[WSAEnlilSimulation]:
+        """Fetch standalone WSA-Enlil simulation runs from CCMC DONKI."""
+        params = {
+            'startDate': start_date.strftime('%Y-%m-%d'),
+            'endDate': end_date.strftime('%Y-%m-%d'),
+            'api_key': self.nasa_api_key,
+        }
+        data = self._get(ENDPOINTS['donki_wsa_enlil'], params, cache_minutes=15)
+        if not data or not isinstance(data, list):
+            return []
+        results: List[WSAEnlilSimulation] = []
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            completion = parse_swpc_time(item.get('modelCompletionTime'))
+            if completion is None:
+                continue
+            sim_id = str(item.get('simulationID') or f"ENLIL-{completion.isoformat()}").strip()
+            est_arrival = parse_swpc_time(item.get('estimatedShockArrivalTime'))
+            est_duration = as_float(item.get('estimatedDuration'), float('nan'))
+            rmin_re = as_float(item.get('rmin_re'), float('nan'))
+            cme_inputs_raw = item.get('cmeInputs') or []
+            cme_inputs = tuple(
+                {
+                    'cme_id': str(ci.get('cmeid') or ci.get('cmeID') or ''),
+                    'start_time': str(ci.get('cmeStartTime') or ''),
+                    'speed': as_float(ci.get('speed'), 0.0),
+                    'latitude': as_float(ci.get('latitude'), float('nan')) if ci.get('latitude') is not None else None,
+                    'longitude': as_float(ci.get('longitude'), float('nan')) if ci.get('longitude') is not None else None,
+                    'half_angle': as_float(ci.get('halfAngle'), float('nan')) if ci.get('halfAngle') is not None else None,
+                }
+                for ci in cme_inputs_raw if isinstance(ci, dict)
+            )
+            impact_raw = item.get('impactList') or []
+            impact_list = tuple(
+                {
+                    'location': str(imp.get('location') or ''),
+                    'arrival_time': str(imp.get('arrivalTime') or ''),
+                    'is_glancing_blow': as_bool(imp.get('isGlancingBlow'), default=False),
+                }
+                for imp in impact_raw if isinstance(imp, dict)
+            )
+            def _opt_int(val: Any) -> Optional[int]:
+                num = as_float(val, float('nan'))
+                return int(round(num)) if math.isfinite(num) else None
+            results.append(WSAEnlilSimulation(
+                simulation_id=sim_id,
+                model_completion_time=completion,
+                au=as_float(item.get('au'), 2.0),
+                estimated_shock_arrival_time=est_arrival,
+                estimated_duration=est_duration if math.isfinite(est_duration) else None,
+                rmin_re=rmin_re if math.isfinite(rmin_re) else None,
+                kp_18=_opt_int(item.get('kp_18')),
+                kp_90=_opt_int(item.get('kp_90')),
+                kp_135=_opt_int(item.get('kp_135')),
+                kp_180=_opt_int(item.get('kp_180')),
+                is_earth_gb=as_bool(item.get('isEarthGB'), default=False),
+                is_earth_minor_impact=as_bool(item.get('isEarthMinorImpact'), default=False),
+                cme_inputs=cme_inputs,
+                impact_list=impact_list,
+                link=str(item.get('link') or ''),
+                source='DONKI',
+            ))
+        return sorted(results, key=lambda x: x.model_completion_time, reverse=True)
+
+    def get_donki_notifications(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        notification_type: str = 'all',
+    ) -> List[DonkiNotification]:
+        """Fetch and deduplicate operational notifications from CCMC DONKI."""
+        params = {
+            'startDate': start_date.strftime('%Y-%m-%d'),
+            'endDate': end_date.strftime('%Y-%m-%d'),
+            'type': notification_type,
+            'api_key': self.nasa_api_key,
+        }
+        data = self._get(ENDPOINTS['donki_notifications'], params, cache_minutes=15)
+        if not data or not isinstance(data, list):
+            return []
+        results: List[DonkiNotification] = []
+        seen_ids = set()
+        seen_hashes = set()
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            issued = parse_swpc_time(item.get('messageIssueTime'))
+            if issued is None:
+                continue
+            body = str(item.get('messageBody') or '')
+            body_hash = hashlib.sha256(body.encode('utf-8')).hexdigest()
+            message_id = str(item.get('messageID') or body_hash[:16]).strip()
+            if not message_id or message_id in seen_ids or body_hash in seen_hashes:
+                continue
+            seen_ids.add(message_id)
+            seen_hashes.add(body_hash)
+            results.append(DonkiNotification(
+                message_id=message_id,
+                message_type=str(item.get('messageType') or 'other'),
+                message_issue_time=issued,
+                message_url=str(item.get('messageURL') or ''),
+                body_hash=body_hash,
+                message_body=body,
+                source='DONKI',
+            ))
+        return sorted(results, key=lambda x: x.message_issue_time, reverse=True)
+
+    def get_donki_mpc(self, start_date: datetime, end_date: datetime) -> List[MagnetopauseCrossing]:
+        """Fetch Magnetopause Crossing (MPC) events from CCMC DONKI."""
+        params = {
+            'startDate': start_date.strftime('%Y-%m-%d'),
+            'endDate': end_date.strftime('%Y-%m-%d'),
+            'api_key': self.nasa_api_key,
+        }
+        data = self._get(ENDPOINTS['donki_mpc'], params, cache_minutes=15)
+        if not data or not isinstance(data, list):
+            return []
+        results: List[MagnetopauseCrossing] = []
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            event_time = parse_swpc_time(item.get('eventTime'))
+            if event_time is None:
+                continue
+            mpc_id = str(item.get('mpcID') or item.get('activityID') or f"MPC-{event_time.isoformat()}").strip()
+            results.append(MagnetopauseCrossing(
+                mpc_id=mpc_id,
+                event_time=event_time,
+                instruments=self._extract_donki_instruments(item),
+                linked_event_ids=self._extract_donki_linked_events(item),
+                submission_time=parse_swpc_time(item.get('submissionTime')),
+                link=str(item.get('link') or ''),
+                source='DONKI',
+            ))
+        return sorted(results, key=lambda x: x.event_time, reverse=True)
+
+    def get_donki_rbe(self, start_date: datetime, end_date: datetime) -> List[RadiationBeltEnhancement]:
+        """Fetch Radiation Belt Enhancement (RBE) events from CCMC DONKI."""
+        params = {
+            'startDate': start_date.strftime('%Y-%m-%d'),
+            'endDate': end_date.strftime('%Y-%m-%d'),
+            'api_key': self.nasa_api_key,
+        }
+        data = self._get(ENDPOINTS['donki_rbe'], params, cache_minutes=15)
+        if not data or not isinstance(data, list):
+            return []
+        results: List[RadiationBeltEnhancement] = []
+        for item in data:
+            if not isinstance(item, dict):
+                continue
+            event_time = parse_swpc_time(item.get('eventTime'))
+            if event_time is None:
+                continue
+            rbe_id = str(item.get('rbeID') or item.get('activityID') or f"RBE-{event_time.isoformat()}").strip()
+            results.append(RadiationBeltEnhancement(
+                rbe_id=rbe_id,
+                event_time=event_time,
+                instruments=self._extract_donki_instruments(item),
+                linked_event_ids=self._extract_donki_linked_events(item),
+                submission_time=parse_swpc_time(item.get('submissionTime')),
+                link=str(item.get('link') or ''),
+                source='DONKI',
+            ))
+        return sorted(results, key=lambda x: x.event_time, reverse=True)
+
+    @staticmethod
     def _parse_flare_intensity(class_type: str) -> float:
-        """Parse flare class to intensity value in W/m^2."""
         if not class_type:
             return 0.0
-
         class_type = str(class_type).upper().strip()
         scales = {'X': 1e-4, 'M': 1e-5, 'C': 1e-6, 'B': 1e-7, 'A': 1e-8}
-
         letter = class_type[:1]
         if letter not in scales:
             return 0.0
-
         magnitude = class_type[1:].strip()
         try:
             multiplier = float(magnitude) if magnitude else 1.0
         except ValueError:
             multiplier = 1.0
-
         return multiplier * scales[letter]
 
     def _kp_to_g_scale(self, kp: float) -> int:
-        """Convert Kp index to G-scale"""
         if kp >= 9:
             return 5
         elif kp >= 8:
@@ -1761,15 +4441,9 @@ class SpaceWeatherAPI:
             return 1
         return 0
 
-
     def get_lyra_level4_png(self, day: Optional[datetime] = None,
                             timeout: int = 30) -> Optional[Dict[str, Any]]:
-        """Fetch one calibrated PROBA2/LYRA Level 4 daily context PNG.
-
-        The pre-rendered product contains all four one-minute calibrated
-        irradiance channels. It is a browsing/context product, not a numerical
-        input to risk scoring or flare detection.
-        """
+        """Fetch one calibrated PROBA2/LYRA Level 4 daily context PNG."""
         base_urls = (
             'https://proba2.sidc.be/lyra/data/Level4calibrated',
             'http://proba2.sidc.be/lyra/data/Level4calibrated',
@@ -1791,8 +4465,7 @@ class SpaceWeatherAPI:
                 url = f'{base}/{filename}'
                 for attempt in range(2):
                     try:
-                        response = self.session.get(url, timeout=timeout,
-                                                    allow_redirects=True)
+                        response = self.session.get(url, timeout=timeout, allow_redirects=True)
                         if response.status_code == 404:
                             break
                         if response.status_code >= 500 and attempt == 0:
@@ -1807,8 +4480,7 @@ class SpaceWeatherAPI:
                         break
                     content_type = response.headers.get('Content-Type', '').lower()
                     if (payload.startswith(png_signature) and len(payload) >= 4096
-                            and (not content_type or 'png' in content_type
-                                 or 'octet-stream' in content_type)):
+                            and (not content_type or 'png' in content_type or 'octet-stream' in content_type)):
                         if label == 'latest':
                             observed_iso = datetime.now(timezone.utc).isoformat()
                         else:
@@ -1826,51 +4498,88 @@ class SpaceWeatherAPI:
                     break
         return None
 
-    _PSP_LOADER_ALIASES = {'fields':('fields',),'spc':('spc',),'spi':('spi','spani'),'spe':('spe','spane'),'epilo':('epilo','isois_epilo'),'epihi':('epihi','isois_epihi'),'isois':('isois',),'wispr':('wispr','wispr_l3','wisprl3')}
+    _PSP_LOADER_ALIASES = {
+        'fields': ('fields',), 'spc': ('spc',), 'spi': ('spi', 'spani'),
+        'spe': ('spe', 'spane'), 'epilo': ('epilo', 'isois_epilo'),
+        'epihi': ('epihi', 'isois_epihi'), 'isois': ('isois',),
+        'wispr': ('wispr', 'wispr_l3', 'wisprl3'),
+    }
 
     def _resolve_psp_loader(self, name: str):
-        try: import pyspedas
-        except ImportError: return None
-        psp=getattr(pyspedas,'psp',None) or getattr(getattr(pyspedas,'projects',None),'psp',None)
-        if psp is None: return None
+        try:
+            import pyspedas
+        except ImportError:
+            return None
+        psp = getattr(pyspedas, 'psp', None) or getattr(getattr(pyspedas, 'projects', None), 'psp', None)
+        if psp is None:
+            return None
         for alias in self._PSP_LOADER_ALIASES.get(name, (name,)):
             loader = getattr(psp, alias, None)
             if loader is not None:
                 return loader
         if name == 'wispr':
             available = [item for item in dir(psp) if 'wispr' in item.lower()]
-            print("  PSP WISPR: no loader found. wispr-like attributes: "
-                  f"{available or 'none'}")
+            print(f"  PSP WISPR: no loader found. wispr-like attributes: {available or 'none'}")
         return None
 
     @staticmethod
     def _coerce_psp_series(payload: Any):
-        if not isinstance(payload,dict) or payload.get('x') is None or payload.get('y') is None: return None
+        if not isinstance(payload, dict) or payload.get('x') is None or payload.get('y') is None:
+            return None
         try:
-            times=[float(v) for v in list(payload['x'])]
-            raw=payload['y'].tolist() if hasattr(payload['y'],'tolist') else list(payload['y'])
-        except (TypeError,ValueError): return None
-        return (times,raw) if times and len(times)==len(raw) else None
+            raw_x = payload['x'].tolist() if hasattr(payload['x'], 'tolist') else list(payload['x'])
+            times = [
+                SpaceWeatherVisualizer._psp_time_to_utc(v).timestamp()
+                if isinstance(v, (datetime, str)) or (HAS_NUMPY and isinstance(v, np.datetime64))
+                else float(v)
+                for v in raw_x
+            ]
+            raw = payload['y'].tolist() if hasattr(payload['y'], 'tolist') else list(payload['y'])
+        except (TypeError, ValueError, OverflowError, OSError):
+            return None
+        return (times, raw) if times and len(times) == len(raw) else None
 
     @staticmethod
     def _classify_psp_series(values: list) -> Optional[str]:
         for value in values:
-            if isinstance(value,(list,tuple)):
-                depth=len(value)
-                return 'vector2' if depth==2 else 'vector3' if depth==3 else 'spectrum' if depth>3 else None
-            try: float(value); return 'scalar'
-            except (TypeError,ValueError): continue
+            if isinstance(value, (list, tuple)):
+                if not value:
+                    continue
+                if isinstance(value[0], (list, tuple)):
+                    return 'spectrum'
+                depth = len(value)
+                if depth == 1:
+                    return 'scalar'
+                return 'vector2' if depth == 2 else 'vector3' if depth == 3 else 'spectrum' if depth > 3 else None
+            try:
+                float(value)
+                return 'scalar'
+            except (TypeError, ValueError):
+                continue
         return None
 
-    def _call_psp_loader(self, loader, kwargs: Dict[str, Any], label: str):
-        """Call one PySPEDAS loader without allowing timed-out workers to pile up.
+    @staticmethod
+    def _psp_series_has_valid_measurements(values: list, fill_threshold: float = 1.0e30) -> bool:
+        """Return True when at least two timestamps contain finite non-fill measurements."""
+        def _has_valid_scalar(item: Any) -> bool:
+            if isinstance(item, (list, tuple)):
+                return any(_has_valid_scalar(sub) for sub in item)
+            try:
+                num = float(item)
+            except (TypeError, ValueError, OverflowError):
+                return False
+            return math.isfinite(num) and abs(num) < fill_threshold
 
-        CPython cannot safely terminate a live thread, and PySPEDAS/pytplot uses
-        process-global state that is not safely transferable from a child
-        process. v4.1.5 therefore enforces a single-worker circuit breaker: after
-        a timeout, later PSP loads are skipped until the original worker exits.
-        This bounds worker accumulation and prevents overlapping pytplot writes.
-        """
+        valid_rows = 0
+        for row in values:
+            if _has_valid_scalar(row):
+                valid_rows += 1
+                if valid_rows >= 2:
+                    return True
+        return False
+
+    def _call_psp_loader(self, loader, kwargs: Dict[str, Any], label: str):
+        """Call one PySPEDAS loader without allowing timed-out workers to pile up."""
         print(f"    calling {label} for {kwargs.get('trange')}", flush=True)
         seconds = max(1, int(self.psp_loader_timeout))
         outcome = queue.Queue(maxsize=1)
@@ -1891,8 +4600,7 @@ class SpaceWeatherAPI:
                 except BaseException as exc:
                     outcome.put((False, exc))
 
-            worker = threading.Thread(
-                target=invoke, name=f"psp-loader-{label}", daemon=True)
+            worker = threading.Thread(target=invoke, name=f"psp-loader-{label}", daemon=True)
             self._psp_active_worker = worker
             self._psp_active_label = label
             worker.start()
@@ -1913,43 +4621,224 @@ class SpaceWeatherAPI:
             return value
         raise value
 
-    def load_psp_product(self, product_key: str, start: datetime, end: datetime) -> Optional[Dict[str,Any]]:
-        entry=PSP_PRODUCTS.get(product_key)
-        if not entry: return None
-        loader=self._resolve_psp_loader(entry['loader'])
+    def _load_psp_cdaweb_product(self, product_key: str, start: datetime,
+                                      end: datetime) -> Optional[Dict[str, Any]]:
+        """Load a published PSP product through NASA CDAWeb when available.
+
+        Dataset and variable names are discovered at runtime.  The optional
+        dependency is intentionally isolated so core mode remains functional.
+        """
+        entry = PSP_PRODUCTS.get(product_key, {})
+        datasets = entry.get('cda_dataset_candidates', ())
+        if not datasets:
+            return None
+        try:
+            from cdasws import CdasWs
+            from cdasws.cdasws import TimeInterval
+            from cdasws.datarepresentation import DataRepresentation
+        except ImportError:
+            return None
+        begin = start if start.tzinfo else start.replace(tzinfo=timezone.utc)
+        finish = end if end.tzinfo else end.replace(tzinfo=timezone.utc)
+        begin, finish = begin.astimezone(timezone.utc), finish.astimezone(timezone.utc)
+        client = CdasWs()
+        for dataset_id in datasets:
+            try:
+                def _fetch_cda(trange=None):
+                    metadata = client.get_variables(dataset_id) or []
+                    names = [str(item.get('Name', '')).strip() for item in metadata
+                             if isinstance(item, dict) and item.get('Name')]
+                    # Exclude obvious support axes; quality fields remain included.
+                    selected = [name for name in names
+                                if name.lower() not in {'epoch', 'time', 'time_pb5'}]
+                    if not selected:
+                        return None
+                    _, data_payload = client.get_data(
+                        dataset_id, selected,
+                        TimeInterval(begin.isoformat(), finish.isoformat()),
+                        dataRepresentation=DataRepresentation.XARRAY)
+                    return data_payload
+
+                payload = self._call_psp_loader(
+                    _fetch_cda,
+                    {'trange': [begin.isoformat(), finish.isoformat()]},
+                    f'{product_key}/{dataset_id} CDAWeb',
+                )
+                if payload is None or not hasattr(payload, 'data_vars'):
+                    continue
+                series = {}
+                for name in payload.data_vars:
+                    array = payload[name]
+                    if not getattr(array, 'dims', None):
+                        continue
+                    time_dim = next((dim for dim in array.dims
+                                     if str(dim).lower() in {'epoch', 'time'}), None)
+                    if time_dim is None or time_dim not in payload.coords:
+                        continue
+                    values = array.values.tolist()
+                    raw_times = payload.coords[time_dim].values.tolist()
+                    if not values or len(raw_times) != len(values):
+                        continue
+                    try:
+                        times = [
+                            SpaceWeatherVisualizer._psp_time_to_utc(t).timestamp()
+                            for t in raw_times
+                        ]
+                    except (OverflowError, OSError, TypeError, ValueError):
+                        continue
+                    kind = self._classify_psp_series(values)
+                    if kind:
+                        series[str(name)] = {'times': times, 'values': values,
+                                             'kind': kind}
+                if series:
+                    return {
+                        'key': product_key, 'loader': 'cdasws',
+                        'datatype': dataset_id, 'dataset_id': dataset_id,
+                        'level': entry.get('level'), 'kind': entry.get('kind'),
+                        'title': entry.get('title'),
+                        'components': entry.get('components'),
+                        'source': f"NASA CDAWeb Parker Solar Probe {entry.get('title')}",
+                        'start': begin.isoformat(), 'end': finish.isoformat(),
+                        'series': series, 'operational': False,
+                        'published_archive': True,
+                    }
+            except Exception as exc:
+                print(f"  PSP CDAWeb {dataset_id}: {type(exc).__name__}: {exc}")
+        return None
+
+    def _extract_psp_valid_series(self, loaded: Any) -> Tuple[Dict[str, Dict[str, Any]], int, int]:
+        """Extract valid non-fill PSP series while continuing past fill-only variables."""
+        if isinstance(loaded, (list, tuple)):
+            coerced_dict: Dict[str, Any] = {}
+            try:
+                import pytplot
+                for var_name in loaded:
+                    if not isinstance(var_name, str):
+                        continue
+                    data_obj = pytplot.get_data(var_name)
+                    if data_obj is not None and hasattr(data_obj, 'times') and hasattr(data_obj, 'y'):
+                        coerced_dict[var_name] = {'x': data_obj.times, 'y': data_obj.y}
+                    elif isinstance(data_obj, (tuple, list)) and len(data_obj) >= 2:
+                        coerced_dict[var_name] = {'x': data_obj[0], 'y': data_obj[1]}
+            except Exception:
+                coerced_dict = {}
+            loaded = coerced_dict
+        if not isinstance(loaded, dict):
+            return {}, 0, 0
+        series: Dict[str, Dict[str, Any]] = {}
+        fill_only_skipped = 0
+        for name, payload in loaded.items():
+            if SpaceWeatherVisualizer._psp_is_metadata_series(name):
+                continue
+            parsed = self._coerce_psp_series(payload)
+            if not parsed:
+                continue
+            kind = self._classify_psp_series(parsed[1])
+            if not kind:
+                continue
+            if not self._psp_series_has_valid_measurements(parsed[1]):
+                fill_only_skipped += 1
+                continue
+            series[name] = {'times': parsed[0], 'values': parsed[1], 'kind': kind}
+        return series, len(loaded), fill_only_skipped
+
+    def load_psp_product(
+        self, product_key: str, start: datetime, end: datetime,
+        primary_datatype_only: bool = False,
+        raise_on_timeout: bool = False,
+    ) -> Optional[Dict[str, Any]]:
+        entry = PSP_PRODUCTS.get(product_key)
+        if not entry:
+            return None
+        primary_only = bool(primary_datatype_only or getattr(self, '_psp_probe_only', False))
+        raise_timeout = bool(raise_on_timeout or getattr(self, '_psp_raise_on_timeout', False))
+        self.last_psp_probe_state = 'file_absent'
+        loader = self._resolve_psp_loader(entry['loader'])
         if loader is None:
-            print(f"  PSP {product_key}: loader '{entry['loader']}' unavailable."); return None
-        trange=[start.strftime('%Y-%m-%d/%H:%M:%S'),end.strftime('%Y-%m-%d/%H:%M:%S')]
-        loaded=selected=None
-        for datatype in entry['datatype_candidates']:
-            try: candidate=self._call_psp_loader(loader, {'trange':trange, 'datatype':datatype, 'level':entry['level'], 'time_clip':True, 'notplot':True}, f'{product_key}/{datatype}')
+            print(f"  PSP {product_key}: loader '{entry['loader']}' unavailable; trying CDAWeb.")
+            return self._load_psp_cdaweb_product(product_key, start, end)
+        trange = [start.strftime('%Y-%m-%d/%H:%M:%S'), end.strftime('%Y-%m-%d/%H:%M:%S')]
+        candidates = (entry['datatype_candidates'][:1]
+                      if primary_only else entry['datatype_candidates'])
+        selected = None
+        series: Dict[str, Dict[str, Any]] = {}
+        raw_count = 0
+        fill_only_skipped = 0
+        saw_empty_variables = False
+        for datatype in candidates:
+            candidate = None
+            try:
+                candidate = self._call_psp_loader(
+                    loader, {'trange': trange, 'datatype': datatype, 'level': entry['level'],
+                             'time_clip': True, 'notplot': True}, f'{product_key}/{datatype}')
+            except TimeoutError as exc:
+                self.last_psp_probe_state = 'timeout'
+                print(f"  PSP {product_key}/{datatype}: TimeoutError")
+                if raise_timeout:
+                    raise
+                break
             except TypeError:
                 try:
-                    candidate=self._call_psp_loader(loader, {'trange':trange, 'datatype':datatype, 'level':entry['level'], 'notplot':True}, f'{product_key}/{datatype} compatibility')
+                    candidate = self._call_psp_loader(
+                        loader, {'trange': trange, 'datatype': datatype, 'level': entry['level'],
+                                 'notplot': True}, f'{product_key}/{datatype} compatibility')
+                except TimeoutError as exc:
+                    self.last_psp_probe_state = 'timeout'
+                    print(f"  PSP {product_key}/{datatype}: TimeoutError")
+                    if raise_timeout:
+                        raise
+                    break
                 except Exception:
-                    candidate=None
+                    candidate = None
             except Exception as exc:
                 print(f"  PSP {product_key}/{datatype}: {type(exc).__name__}")
-                candidate=None
-            if not candidate and entry['loader'] in ('spi', 'spe'):
+                candidate = None
+            if not candidate and not primary_only and entry['loader'] in ('spi', 'spe'):
                 try:
-                    candidate=self._call_psp_loader(loader, {'trange':trange, 'datatype':entry['level'], 'level':datatype, 'time_clip':True, 'notplot':True}, f'{product_key}/{datatype} swapped')
+                    candidate = self._call_psp_loader(
+                        loader, {'trange': trange, 'datatype': entry['level'], 'level': datatype,
+                                 'time_clip': True, 'notplot': True}, f'{product_key}/{datatype} swapped')
+                except TimeoutError:
+                    self.last_psp_probe_state = 'timeout'
+                    if raise_timeout:
+                        raise
+                    break
                 except Exception:
-                    candidate=None
-            if candidate: loaded,selected=candidate,datatype; break
-        if not isinstance(loaded,dict): return None
-        series={}
-        for name,payload in loaded.items():
-            parsed=self._coerce_psp_series(payload)
-            if parsed:
-                kind=self._classify_psp_series(parsed[1])
-                if kind: series[name]={'times':parsed[0],'values':parsed[1],'kind':kind}
-        if not series: return None
-        return {'key':product_key,'loader':entry['loader'],'datatype':selected,'level':entry['level'],'kind':entry['kind'],'title':entry['title'],'components':entry.get('components'),'source':f"Parker Solar Probe {entry['title']}",'start':start.isoformat(),'end':end.isoformat(),'series':series,'operational':False}
+                    candidate = None
+            if candidate:
+                cand_series, cand_raw, cand_fill = self._extract_psp_valid_series(candidate)
+                if cand_series:
+                    series, selected, raw_count, fill_only_skipped = (
+                        cand_series, datatype, cand_raw, cand_fill)
+                    self.last_psp_probe_state = 'available'
+                    break
+                if cand_raw > 0:
+                    saw_empty_variables = True
+                    self.last_psp_probe_state = 'empty_variables'
+        if not series:
+            if saw_empty_variables:
+                self.last_psp_probe_state = 'empty_variables'
+            if primary_only:
+                return None
+            return self._load_psp_cdaweb_product(product_key, start, end)
+        return {
+            'key': product_key, 'loader': entry['loader'], 'datatype': selected,
+            'level': entry['level'], 'kind': entry['kind'], 'title': entry['title'],
+            'components': entry.get('components'),
+            'source': f"Parker Solar Probe {entry['title']}",
+            'start': start.isoformat(), 'end': end.isoformat(),
+            'series': series, 'raw_variable_count': raw_count,
+            'fill_only_skipped': fill_only_skipped, 'operational': False,
+        }
 
-    def get_psp_fields_mag(self,start,end): return self.load_psp_product('fields_mag_rtn',start,end)
-    def get_psp_spc_plasma(self,start,end): return self.load_psp_product('sweap_spc',start,end)
-    def get_psp_epihi_particles(self,start,end): return self.load_psp_product('isois_epihi',start,end)
+    def get_psp_fields_mag(self, start, end):
+        return self.load_psp_product('fields_mag_rtn', start, end)
+
+    def get_psp_spc_plasma(self, start, end):
+        return self.load_psp_product('sweap_spc', start, end)
+
+    def get_psp_epihi_particles(self, start, end):
+        return self.load_psp_product('isois_epihi', start, end)
 
     def get_psp_wispr_files(self, start: datetime, end: datetime,
                             output_dir: str) -> Optional[Dict[str, Any]]:
@@ -1979,14 +4868,11 @@ class SpaceWeatherAPI:
                             files = list(files)
                         except TypeError:
                             files = None
-                    if files and not all(isinstance(item, (str, os.PathLike))
-                                         for item in files):
-                        print(f"  PSP WISPR {datatype}: loader returned "
-                              "non-path objects; discarding.")
+                    if files and not all(isinstance(item, (str, os.PathLike)) for item in files):
+                        print(f"  PSP WISPR {datatype}: loader returned non-path objects; discarding.")
                         files = None
                 except Exception as exc:
-                    print(f"  PSP WISPR {datatype} attempt {attempt_number}: "
-                          f"{type(exc).__name__}")
+                    print(f"  PSP WISPR {datatype} attempt {attempt_number}: {type(exc).__name__}")
                     files = None
                 if files:
                     break
@@ -2047,18 +4933,25 @@ class SpaceWeatherAPI:
                             if observed:
                                 preview_observed[preview] = str(observed)
                     except Exception:
+                        try:
+                            if 'fig' in locals():
+                                plt.close(fig)
+                        except Exception:
+                            pass
                         continue
             except ImportError:
                 pass
-        manifest = {'source': 'Parker Solar Probe WISPR', 'files': archived,
-                    'previews': previews, 'preview_observed': preview_observed,
-                    'start': start.isoformat(),
-                    'end': end.isoformat(), 'operational': False}
+        manifest = {
+            'source': 'Parker Solar Probe WISPR', 'files': archived,
+            'previews': previews, 'preview_observed': preview_observed,
+            'start': start.isoformat(), 'end': end.isoformat(), 'operational': False,
+        }
         manifest_path = os.path.join(output_dir, 'psp', 'wispr', 'index.json')
         os.makedirs(os.path.dirname(manifest_path), exist_ok=True)
         with open(manifest_path, 'w', encoding='utf-8') as handle:
             json.dump(manifest, handle, indent=2)
         return manifest
+
 
 # ============================================================================
 # SUNPY AND ASTROPY INTEGRATION
@@ -2076,7 +4969,6 @@ class SunPyAstropyIntegration:
         """Fetch GOES flare data from the HEK via SunPy"""
         if not self.has_sunpy:
             return []
-
         try:
             time_range = TimeRange(start_date, end_date)
             result = Fido.search(
@@ -2084,7 +4976,6 @@ class SunPyAstropyIntegration:
                 a.hek.EventType('FL'),
                 a.hek.OBS.Observatory == 'GOES'
             )
-
             flares = []
             if len(result) > 0 and len(result[0]) > 0:
                 for record in result[0]:
@@ -2094,25 +4985,17 @@ class SunPyAstropyIntegration:
                             continue
                         peak = parse_swpc_time(record.get('event_peaktime'))
                         end = parse_swpc_time(record.get('event_endtime'))
-
                         class_type = record.get('fl_goescls') or 'Unknown'
-
-                        intensity = SpaceWeatherAPI._parse_flare_intensity(
-                            class_type)
-
+                        intensity = SpaceWeatherAPI._parse_flare_intensity(class_type)
                         flares.append(SolarFlare(
-                            start_time=start,
-                            peak_time=peak,
-                            end_time=end,
-                            class_type=class_type,
-                            intensity=intensity,
+                            start_time=start, peak_time=peak, end_time=end,
+                            class_type=class_type, intensity=intensity,
                             location=record.get('hgs_coord', None),
                             active_region=record.get('ar_noaanum', None),
                             source="SunPy/HEK"
                         ))
                     except Exception:
                         continue
-
             return flares
         except Exception as e:
             print(f"SunPy flare search error: {e}")
@@ -2122,7 +5005,6 @@ class SunPyAstropyIntegration:
         """Get current UTC time using Astropy"""
         if not self.has_astropy:
             return datetime.now(timezone.utc)
-
         try:
             return Time.now().datetime.replace(tzinfo=timezone.utc)
         except Exception:
@@ -2143,20 +5025,55 @@ class SunPyAstropyIntegration:
 # ============================================================================
 
 class RiskAssessmentEngine:
-    """Calculates risk levels from space weather data"""
+    """Calculates risk levels from space weather data using a validated model."""
 
-    def __init__(self):
-        self.weights = {
-            'xray': 0.30,
-            'proton': 0.25,
-            'geomagnetic': 0.25,
-            'solar_wind': 0.20
+    DEFAULT_MODEL = {
+        'model_id': '4.2-default',
+        'observation_weights': {
+            'xray': 0.30, 'proton': 0.25,
+            'geomagnetic': 0.25, 'solar_wind': 0.20,
+        },
+        'blend_weights': {'observations': 0.70, 'forecast': 0.30},
+    }
+
+    def __init__(self, model: Optional[Dict[str, Any]] = None):
+        self.model = self.validate_model(model or self.DEFAULT_MODEL)
+        self.weights = dict(self.model['observation_weights'])
+        self.blend_weights = dict(self.model['blend_weights'])
+
+    @classmethod
+    def validate_model(cls, model: Dict[str, Any]) -> Dict[str, Any]:
+        candidate = copy.deepcopy(model)
+        required_groups = {
+            'observation_weights': {'xray', 'proton', 'geomagnetic', 'solar_wind'},
+            'blend_weights': {'observations', 'forecast'},
         }
-        # Published score blend. These weights must sum to 1.0.
-        self.blend_weights = {
-            'observations': 0.70,
-            'forecast': 0.30,
-        }
+        candidate.setdefault('model_id', 'custom')
+        for group, required in required_groups.items():
+            values = candidate.get(group)
+            if not isinstance(values, dict) or set(values) != required:
+                raise ValueError(f'{group} must contain exactly: {sorted(required)}')
+            converted = {}
+            for key, value in values.items():
+                number = float(value)
+                if not math.isfinite(number) or number < 0.0 or number > 1.0:
+                    raise ValueError(f'{group}.{key} must be finite and in range 0..1')
+                converted[key] = number
+            if not math.isclose(sum(converted.values()), 1.0, abs_tol=1e-9):
+                raise ValueError(f'{group} weights must sum to 1.0')
+            candidate[group] = converted
+        candidate['model_id'] = str(candidate['model_id']).strip() or 'custom'
+        return candidate
+
+    @classmethod
+    def load_model(cls, path: Optional[str]) -> Dict[str, Any]:
+        if not path:
+            return copy.deepcopy(cls.DEFAULT_MODEL)
+        with open(path, 'r', encoding='utf-8') as handle:
+            payload = json.load(handle)
+        if not isinstance(payload, dict):
+            raise ValueError('risk model configuration must be a JSON object')
+        return cls.validate_model(payload)
 
     @staticmethod
     def _level_from_score(score: float) -> str:
@@ -2174,9 +5091,7 @@ class RiskAssessmentEngine:
         """Calculate X-ray risk (0-100)"""
         if not classification or classification == "N/A":
             return 0, "No data"
-
         classification = str(classification).upper()
-
         if classification.startswith('X'):
             try:
                 val = float(classification[1:])
@@ -2199,7 +5114,6 @@ class RiskAssessmentEngine:
             return 40, "M-class flare"
         elif classification.startswith('C'):
             return 20, "Minor C-class activity"
-
         return 5, "Background levels"
 
     def calculate_proton_risk(self, flux_10mev: float) -> Tuple[int, str]:
@@ -2235,7 +5149,6 @@ class RiskAssessmentEngine:
         """Calculate solar wind impact risk (0-100)"""
         risk = 0
         reasons = []
-
         if speed >= 800:
             risk += 40
             reasons.append("Very high speed stream")
@@ -2274,11 +5187,7 @@ class RiskAssessmentEngine:
                                      x_probability: float,
                                      imminent_cme_count: int = 0,
                                      strongest_cme_speed: float = 0.0) -> Dict:
-        """Return a 0-100 forward-looking screening component.
-
-        This component reflects expected conditions that have not necessarily
-        reached L1. It is not a prediction of final storm intensity.
-        """
+        """Return a 0-100 forward-looking screening component."""
         kp_component, _ = self.calculate_geomagnetic_risk(peak_kp or 0.0)
         flare_component = min(
             100.0,
@@ -2288,11 +5197,8 @@ class RiskAssessmentEngine:
         if imminent_cme_count <= 0:
             cme_component = 0.0
         else:
-            speed_ratio = max(0.0, min(1.0,
-                float(strongest_cme_speed or 0.0) / 1500.0))
-            cme_component = min(100.0,
-                40.0 + 60.0 * speed_ratio +
-                10.0 * max(0, int(imminent_cme_count) - 1))
+            speed_ratio = max(0.0, min(1.0, float(strongest_cme_speed or 0.0) / 1500.0))
+            cme_component = min(100.0, 40.0 + 60.0 * speed_ratio + 10.0 * max(0, int(imminent_cme_count) - 1))
 
         forecast_score = (
             0.50 * kp_component +
@@ -2316,7 +5222,6 @@ class RiskAssessmentEngine:
                                solar_wind_speed: float, bz: float,
                                density: float) -> Dict:
         """Calculate overall space weather risk assessment"""
-
         xray_risk, xray_reason = self.calculate_xray_risk(xray_flux, xray_class)
         proton_risk, proton_reason = self.calculate_proton_risk(proton_flux)
         geo_risk, geo_reason = self.calculate_geomagnetic_risk(kp)
@@ -2330,13 +5235,10 @@ class RiskAssessmentEngine:
         )
 
         risks = {
-            'X-Ray': xray_risk,
-            'Proton': proton_risk,
-            'Geomagnetic': geo_risk,
-            'Solar Wind': sw_risk
+            'X-Ray': xray_risk, 'Proton': proton_risk,
+            'Geomagnetic': geo_risk, 'Solar Wind': sw_risk,
         }
         dominant = max(risks, key=risks.get)
-
         level = self._level_from_score(overall)
 
         concerns = []
@@ -2352,20 +5254,14 @@ class RiskAssessmentEngine:
             concerns.append("Enhanced solar wind conditions")
 
         return {
-            'overall_risk': int(overall),
-            'level': level,
-            'xray_risk': xray_risk,
-            'proton_risk': proton_risk,
-            'geomagnetic_risk': geo_risk,
-            'solar_wind_risk': sw_risk,
+            'overall_risk': int(overall), 'level': level,
+            'xray_risk': xray_risk, 'proton_risk': proton_risk,
+            'geomagnetic_risk': geo_risk, 'solar_wind_risk': sw_risk,
             'dominant_factor': dominant,
             'concerns': concerns if concerns else ["No significant concerns"],
-            'xray_reason': xray_reason,
-            'proton_reason': proton_reason,
-            'geo_reason': geo_reason,
-            'sw_reason': sw_reason
+            'xray_reason': xray_reason, 'proton_reason': proton_reason,
+            'geo_reason': geo_reason, 'sw_reason': sw_reason,
         }
-
 
 
 # ============================================================================
@@ -2375,10 +5271,13 @@ class RiskAssessmentEngine:
 class SpaceWeatherAggregator:
     """Aggregates data from all sources"""
 
-    def __init__(self, nasa_api_key: str = NASA_API_KEY):
+    def __init__(self, nasa_api_key: str = NASA_API_KEY,
+                 output_dir: str = "swrl_report"):
         self.api = SpaceWeatherAPI(nasa_api_key)
         self.sunpy_astropy = SunPyAstropyIntegration()
         self.risk_engine = RiskAssessmentEngine()
+        self.output_dir = output_dir
+        self.store = TelemetryStore(os.path.join(output_dir, 'solar_telemetry.db'))
 
         self.xray_data: List[XRayData] = []
         self.proton_data: List[ProtonData] = []
@@ -2386,12 +5285,21 @@ class SpaceWeatherAggregator:
         self.flares: List[SolarFlare] = []
         self.cmes: List[CME] = []
         self.geomagnetic_storms: List[GeomagneticStorm] = []
+        self.cme_analyses: List[Dict[str, Any]] = []
+        self.interplanetary_shocks: List[InterplanetaryShock] = []
+        self.sep_events: List[SolarEnergeticParticle] = []
+        self.high_speed_streams: List[HighSpeedStream] = []
+        self.wsa_enlil_simulations: List[WSAEnlilSimulation] = []
+        self.donki_notifications: List[DonkiNotification] = []
+        self.magnetopause_crossings: List[MagnetopauseCrossing] = []
+        self.radiation_belt_enhancements: List[RadiationBeltEnhancement] = []
         self.kp_data: List[Dict] = []
         self.kp_forecast: List[Dict] = []
         self.alerts: List[Dict] = []
         self.recent_alert_messages: List[Dict] = []
         self.historical_alert_messages: List[Dict] = []
         self.donki_available: bool = True
+        self.donki_status: str = 'AVAILABLE'
         self.donki_errors: List[str] = []
         self.flare_probabilities: Dict = {}
         self.dst_data: List[Dict] = []
@@ -2404,66 +5312,170 @@ class SpaceWeatherAggregator:
         self.lyra_context: Optional[Dict[str, Any]] = None
         self.lyra_requested: bool = False
 
+        # v5.0.0 Enterprise Upgrades State
+        self.l1_validation: Dict[str, Any] = {}
+        self.spike_filter_stats: Dict[str, int] = {}
+        self.nowcast_result: Dict[str, Any] = {}
+        self.l1_consensus: Dict[str, Any] = {}
+        self.verification_summary: Dict[str, Any] = {}
+        self.kp_verification_summary: Dict[str, Any] = {}
+        self.input_sensitivity: Dict[str, Any] = {}
+        self.shock_diagnostics: Dict[str, Any] = {}
+        self.coupling_diagnostics: Dict[str, Any] = {}
+        self.verifier = ForecastVerifier(self.store)
+        self.stereo_a_beacon: Dict[str, Any] = {}
+        self.stereoscopic_cmes: List[Dict[str, Any]] = []
+        self.stereo_client = StereoABeaconClient(self.api)
+        self.nowcaster = GeomagneticNowcaster(self.store)
+
         self.data_quality: Dict[str, DataQuality] = {}
         self.last_update: Optional[datetime] = None
 
-    def _discover_psp_lag(self, requested_lag: int, now: datetime,
-                          max_probes: int = 3, probe_timeout: int = 10) -> int:
-        """Verify archive availability using an actually requested PSP product.
+    def _discover_psp_latest_end(
+        self, product_key: str, configured_lag: int, now: datetime,
+        max_probes: int = 16, probe_timeout: int = 45,
+    ) -> datetime:
+        """Return the newest verified public-archive end time for one PSP product.
 
-        WISPR is file-oriented and can be substantially heavier than catalogue
-        products, so a WISPR-only run skips lag probing and uses the configured
-        lag directly. Discovery remains bounded by ``max_probes`` and
-        ``probe_timeout``.
+        Availability is discovered independently for every catalogue product
+        using its primary datatype candidate. Probe outcomes distinguish:
+          - 'available': archive file exists and contains valid series
+          - 'timeout': loader timed out while processing a candidate interval
+          - 'empty_variables': archive file loaded but selected variables were fill-only
+          - 'file_absent': no archive file found for the candidate date
         """
-        requested = max(7, int(requested_lag))
-        probe_key = next((key for key in self.psp_requested_keys
-                          if key != 'wispr' and key in PSP_PRODUCTS), None)
-        if probe_key is None:
-            if (not self.psp_requested_keys or
-                    all(key == 'wispr' for key in self.psp_requested_keys)):
-                selection = ('no catalogue products' if not self.psp_requested_keys
-                             else 'WISPR-only run')
-                print(f"  PSP archive lag probe skipped for {selection}; "
-                      f"using configured lag {requested} days.")
-            return requested
+        fallback_lag = max(1, int(configured_lag))
+        fallback_end = now - timedelta(days=fallback_lag)
+        if product_key not in PSP_PRODUCTS:
+            return fallback_end
 
-        candidates = []
-        for lag in (requested, 60, 90, 120, 150, 180, 240):
-            lag = max(7, int(lag))
-            if lag not in candidates:
-                candidates.append(lag)
-        candidates = candidates[:max(1, int(max_probes))]
-        pre_probe_timeout = self.api.psp_loader_timeout
-        self.api.psp_loader_timeout = min(pre_probe_timeout,
-                                          max(1, int(probe_timeout)))
+        budget = max(1, int(max_probes))
+        probes = 0
+        timed_out_lags: List[int] = []
+        empty_variable_lags: List[int] = []
+        old_timeout = self.api.psp_loader_timeout
+        old_probe_only = getattr(self.api, '_psp_probe_only', False)
+        old_raise_timeout = getattr(self.api, '_psp_raise_on_timeout', False)
+        self.api.psp_loader_timeout = min(max(old_timeout, int(probe_timeout)), max(1, int(probe_timeout)))
+        self.api._psp_probe_only = True
+        self.api._psp_raise_on_timeout = True
+
+        def probe_lag(lag: int) -> str:
+            nonlocal probes
+            if probes >= budget:
+                return 'budget_exhausted'
+            probes += 1
+            lag = max(1, int(lag))
+            probe_end = now - timedelta(days=lag)
+            probe_start = probe_end - timedelta(hours=6)
+            self.api.last_psp_probe_state = 'file_absent'
+            try:
+                sample = self.api.load_psp_product(
+                    product_key, probe_start, probe_end)
+            except TimeoutError:
+                timed_out_lags.append(lag)
+                print(
+                    f"  PSP {product_key} newest-date probe at lag {lag} "
+                    f"days timed out during CDF processing (not treated as archive absence).")
+                return 'timeout'
+            except Exception as exc:
+                print(
+                    f"  PSP {product_key} newest-date probe at lag {lag} "
+                    f"days failed: {type(exc).__name__}")
+                return 'file_absent'
+            if sample and sample.get('series'):
+                return 'available'
+            state = getattr(self.api, 'last_psp_probe_state', 'file_absent')
+            if state == 'timeout':
+                timed_out_lags.append(lag)
+                return 'timeout'
+            if state == 'empty_variables':
+                empty_variable_lags.append(lag)
+                print(
+                    f"  PSP {product_key} newest-date probe at lag {lag} "
+                    f"days found archive data with fill-only variables in the 6h probe window.")
+                return 'empty_variables'
+            return 'file_absent'
+
         try:
-            for lag in candidates:
-                probe_end = now - timedelta(days=lag)
-                probe_start = probe_end - timedelta(hours=6)
-                try:
-                    sample = self.api.load_psp_product(
-                        probe_key, probe_start, probe_end)
-                except Exception as exc:
-                    print(f"  PSP {probe_key} archive probe at lag {lag} days "
-                          f"failed: {type(exc).__name__}")
-                    sample = None
-                if sample and sample.get('series'):
-                    print(f"  PSP {probe_key} public archive verified at lag "
-                          f"{lag} days.")
-                    return lag
-            print(f"  PSP {probe_key} archive lag could not be verified; using "
-                  f"configured lag {requested} days.")
-            return requested
-        finally:
-            self.api.psp_loader_timeout = pre_probe_timeout
+            candidates = []
+            for lag in (1, 3, 7, 14, 30, 60, 90, fallback_lag, 120,
+                        150, 180, 240, 365):
+                lag = max(1, int(lag))
+                if lag not in candidates:
+                    candidates.append(lag)
+            candidates.sort()
 
-    def fetch_all_data(self, hours_back: int = 48, hours_forward: int = 48,
+            unavailable_lag = 0
+            available_lag = None
+            for lag in candidates:
+                if probes >= budget:
+                    break
+                state = probe_lag(lag)
+                if state == 'available':
+                    available_lag = lag
+                    break
+                if state == 'timeout':
+                    # A processing timeout means a worker is busy on this date
+                    # (often because a large CDF exists and is being parsed).
+                    # Stop issuing further probes that would be blocked by the
+                    # active worker thread.
+                    break
+                unavailable_lag = lag
+
+            if available_lag is None:
+                if timed_out_lags:
+                    timeout_lag = timed_out_lags[0]
+                    timeout_end = now - timedelta(days=timeout_lag)
+                    print(
+                        f"  PSP {product_key}: probe timed out while processing "
+                        f"{timeout_end.date()} (lag {timeout_lag} days); "
+                        f"using {timeout_end.date()} for full-timeout load.")
+                    return timeout_end
+                if empty_variable_lags:
+                    empty_lag = empty_variable_lags[0]
+                    empty_end = now - timedelta(days=empty_lag)
+                    print(
+                        f"  PSP {product_key}: archive file present at "
+                        f"{empty_end.date()} (lag {empty_lag} days) had fill-only "
+                        f"6h probe variables; using {empty_end.date()} for full window.")
+                    return empty_end
+                print(
+                    f"  PSP {product_key}: newest archive date could not be "
+                    f"verified in {probes} probe(s); using configured lag "
+                    f"{fallback_lag} days.")
+                return fallback_end
+
+            low = unavailable_lag + 1
+            high = available_lag
+            while low < high and probes < budget:
+                middle = (low + high) // 2
+                state = probe_lag(middle)
+                if state == 'available':
+                    high = middle
+                elif state == 'timeout':
+                    break
+                else:
+                    low = middle + 1
+            newest_lag = high
+            newest_end = now - timedelta(days=newest_lag)
+            print(
+                f"  PSP {product_key}: newest verified public date "
+                f"{newest_end.date()} (lag {newest_lag} days; "
+                f"{probes} probe(s)).")
+            return newest_end
+        finally:
+            self.api.psp_loader_timeout = old_timeout
+            self.api._psp_probe_only = old_probe_only
+            self.api._psp_raise_on_timeout = old_raise_timeout
+
+    def _fetch_all_data_sync(self, hours_back: int = 48, hours_forward: int = 48,
                        psp_product_keys: Optional[List[str]] = None, psp_days: int = 30,
                        psp_wispr: bool = False, psp_output_dir: str = 'swrl_report',
                        fetch_lyra: bool = False, include_images: bool = True,
                        psp_series_days: int = 2, psp_lag_days: int = 120,
-                       wispr_days: Optional[int] = None, psp_timeout: int = 120):
+                       wispr_days: Optional[int] = None, psp_timeout: int = 120,
+                       run_id: Optional[str] = None):
         """Fetch all space weather data"""
         psp_product_keys = list(psp_product_keys or [])
         if not HAS_NUMPY:
@@ -2485,8 +5497,6 @@ class SpaceWeatherAggregator:
             if row.timestamp >= cutoff
         ]
 
-        # Assess completeness against the requested history window after
-        # clipping the raw three-day GOES feed to that same window.
         self.data_quality['GOES'] = self._assess_data_quality(
             "GOES Satellite", self.xray_data,
             expected_interval_minutes=1, max_age_minutes=10,
@@ -2494,17 +5504,18 @@ class SpaceWeatherAggregator:
         )
 
         print("  Fetching RTSW solar wind data (L1 fleet)...")
+        raw_solar_wind = self.api.get_rtsw_solar_wind(active_only=False)
         self.solar_wind_data = [
-            row for row in self.api.get_rtsw_solar_wind(active_only=True)
-            if row.timestamp >= cutoff
+            row for row in raw_solar_wind
+            if row.timestamp >= cutoff and row.active
         ]
 
         if self.solar_wind_data:
             print(f"  Active solar wind source: {self.api.active_sw_source}")
         else:
-            print("  No active-flagged records; retrying without the filter...")
+            print("  No active-flagged records; using all fleet records...")
             self.solar_wind_data = [
-                row for row in self.api.get_rtsw_solar_wind(active_only=False)
+                row for row in raw_solar_wind
                 if row.timestamp >= cutoff
             ]
 
@@ -2541,8 +5552,7 @@ class SpaceWeatherAggregator:
         if (self.api.donki_cooldown_until and
                 datetime.now(timezone.utc) < self.api.donki_cooldown_until):
             self.cmes, self.geomagnetic_storms = [], []
-            self.donki_errors.append(
-                'CME/GST skipped during DONKI HTTP 429 cooldown')
+            self.donki_errors.append('CME/GST skipped during DONKI HTTP 429 cooldown')
         else:
             self.cmes = self.api.get_donki_cmes(start_date, end_date)
             if self.api.last_request_error:
@@ -2551,29 +5561,53 @@ class SpaceWeatherAggregator:
             if (self.api.donki_cooldown_until and
                     datetime.now(timezone.utc) < self.api.donki_cooldown_until):
                 self.geomagnetic_storms = []
-                self.donki_errors.append(
-                    'GST skipped during DONKI HTTP 429 cooldown')
+                self.donki_errors.append('GST skipped during DONKI HTTP 429 cooldown')
             else:
                 self.geomagnetic_storms = (
                     self.api.get_donki_geomagnetic_storms(start_date, end_date))
                 if self.api.last_request_error:
                     self.donki_errors.append('GST: ' + self.api.last_request_error)
-        self.donki_available = not self.donki_errors
+        for attr_name, label, fetcher in (
+            ('interplanetary_shocks', 'IPS', lambda: self.api.get_donki_ips(start_date, end_date)),
+            ('sep_events', 'SEP', lambda: self.api.get_donki_sep(start_date, end_date)),
+            ('high_speed_streams', 'HSS', lambda: self.api.get_donki_hss(start_date, end_date)),
+            ('wsa_enlil_simulations', 'WSA_ENLIL', lambda: self.api.get_donki_wsa_enlil(start_date, end_date)),
+            ('donki_notifications', 'NOTIFICATIONS', lambda: self.api.get_donki_notifications(start_date, end_date)),
+            ('magnetopause_crossings', 'MPC', lambda: self.api.get_donki_mpc(start_date, end_date)),
+            ('radiation_belt_enhancements', 'RBE', lambda: self.api.get_donki_rbe(start_date, end_date)),
+            ('cme_analyses', 'CME_ANALYSIS', lambda: self.api.get_donki_cme_analyses(start_date, end_date)),
+        ):
+            if (self.api.donki_cooldown_until and
+                    datetime.now(timezone.utc) < self.api.donki_cooldown_until):
+                setattr(self, attr_name, [])
+                self.donki_errors.append(f'{label} skipped during DONKI HTTP 429 cooldown')
+            else:
+                setattr(self, attr_name, fetcher())
+                if self.api.last_request_error:
+                    self.donki_errors.append(f'{label}: {self.api.last_request_error}')
+        core_failures = {
+            prefix: any(err.startswith(prefix) for err in self.donki_errors)
+            for prefix in ('FLR:', 'CME:', 'GST:')
+        }
+        rate_limited = any('HTTP 429' in err for err in self.donki_errors)
+        all_core_failed = all(core_failures.values())
+        self.donki_available = not rate_limited and not all_core_failed
+        self.donki_status = (
+            'UNAVAILABLE' if not self.donki_available
+            else 'DEGRADED' if self.donki_errors
+            else 'AVAILABLE'
+        )
         self.data_quality['DONKI'] = self._assess_donki_quality()
-
         self.data_quality['SWPC'] = self._assess_swpc_quality()
 
         if self.sunpy_astropy.has_sunpy:
             print("  Fetching additional data via SunPy...")
-            sunpy_flares = self.sunpy_astropy.get_goes_flares_sunpy(
-                start_date, now)
+            sunpy_flares = self.sunpy_astropy.get_goes_flares_sunpy(start_date, now)
             for flare in sunpy_flares:
                 duplicate = any(
-                    abs((flare.start_time - existing.start_time).total_seconds())
-                    <= 300
+                    abs((flare.start_time - existing.start_time).total_seconds()) <= 300
                     and (not flare.active_region or not existing.active_region
-                         or str(flare.active_region)
-                         == str(existing.active_region))
+                         or str(flare.active_region) == str(existing.active_region))
                     for existing in self.flares
                 )
                 if not duplicate:
@@ -2581,22 +5615,40 @@ class SpaceWeatherAggregator:
 
         self.psp_contexts = {}
         requested_keys = list(psp_product_keys)
-        if psp_wispr and include_images: requested_keys.append('wispr')
+        if psp_wispr and include_images:
+            requested_keys.append('wispr')
         self.psp_requested_keys = list(dict.fromkeys(requested_keys))
         self.psp_output_dir = psp_output_dir
         self.api.psp_loader_timeout = max(1, int(psp_timeout))
-        lag_days = (self._discover_psp_lag(psp_lag_days, now)
-                    if self.psp_requested_keys else max(7, int(psp_lag_days)))
-        psp_end = now - timedelta(days=lag_days)
-        series_start = psp_end - timedelta(days=max(1, min(2, int(psp_series_days))))
+        series_days = max(1, min(2, int(psp_series_days)))
         effective_wispr_days = psp_days if wispr_days is None else wispr_days
-        wispr_start = psp_end - timedelta(days=max(1, int(effective_wispr_days)))
-        print(f"  PSP time-series window: {series_start.date()} to {psp_end.date()} "
-              f"({max(1, min(2, int(psp_series_days)))} day(s), lag {lag_days} days)")
+        configured_lag = max(1, int(psp_lag_days))
         for key in self.psp_requested_keys:
             print(f"  Fetching PSP {key}...", flush=True)
-            context = (self.api.get_psp_wispr_files(wispr_start, psp_end, psp_output_dir)
-                       if key == 'wispr' else self.api.load_psp_product(key, series_start, psp_end))
+            if key == 'wispr':
+                # WISPR file discovery remains window-based and uses the
+                # configured conservative lag because it is not a catalogue
+                # time-series product.
+                product_end = now - timedelta(days=configured_lag)
+                product_start = product_end - timedelta(
+                    days=max(1, int(effective_wispr_days)))
+                print(
+                    f"    WISPR window: {product_start.date()} to "
+                    f"{product_end.date()} (configured lag "
+                    f"{configured_lag} days)")
+                context = self.api.get_psp_wispr_files(
+                    product_start, product_end, psp_output_dir)
+            else:
+                product_end = self._discover_psp_latest_end(
+                    key, configured_lag, now)
+                product_start = product_end - timedelta(days=series_days)
+                actual_lag = max(0, (now.date() - product_end.date()).days)
+                print(
+                    f"    {key} window: {product_start.date()} to "
+                    f"{product_end.date()} ({series_days} day(s), "
+                    f"newest verified lag {actual_lag} days)")
+                context = self.api.load_psp_product(
+                    key, product_start, product_end)
             self.psp_contexts[key] = context
             count = len(context.get('series', context.get('files', []))) if context else 0
             print(f"    {key}: {count}" if context else f"    {key}: unavailable")
@@ -2616,7 +5668,179 @@ class SpaceWeatherAggregator:
             else:
                 print("  LYRA Level 4 unavailable after latest/date fallbacks.")
 
+        try:
+            self.store.save_xray(self.xray_data)
+            self.store.save_protons(self.proton_data)
+            self.store.save_solar_wind(raw_solar_wind)
+            self.store.save_kp(self.kp_data)
+            self.store.save_dst(self.dst_data)
+            self.store.save_external_kp_forecast(self.kp_forecast, issued_at=now)
+            self.store.save_donki_events('IPS', self.interplanetary_shocks)
+            self.store.save_donki_events('SEP', self.sep_events)
+            self.store.save_donki_events('HSS', self.high_speed_streams)
+            self.store.save_donki_events('WSA_ENLIL', self.wsa_enlil_simulations)
+            self.store.save_donki_events('MPC', self.magnetopause_crossings)
+            self.store.save_donki_events('RBE', self.radiation_belt_enhancements)
+            self.store.save_donki_events('CME_ANALYSIS', self.cme_analyses)
+            self.store.save_donki_notifications(self.donki_notifications)
+            self.xray_data = self.store.get_xray_range(cutoff, now)
+            self.proton_data = self.store.get_protons_range(cutoff, now)
+            active_wind = self.store.get_solar_wind_range(cutoff, now, active_only=True)
+            self.solar_wind_data = (active_wind or
+                                    self.store.get_solar_wind_range(cutoff, now, active_only=False))
+            self.kp_data = self.store.get_kp_range(cutoff, now)
+            self.dst_data = self.store.get_dst_range(cutoff, now)
+            logging.info('Telemetry database synchronized: %s', self.store.counts())
+        except sqlite3.Error as exc:
+            logging.warning('Telemetry persistence unavailable: %s: %s',
+                            type(exc).__name__, exc)
+
+        # v5.0.0 Upgrade 1: L1 Fleet Cross-Validation & Hampel Despiking
+        try:
+            self.l1_validation = L1FleetValidator.validate_l1_fleet_agreement(
+                self.store, window_minutes=30
+            )
+            # Despike each spacecraft independently. Interleaving SOLAR-1,
+            # DSCOVR, ACE, or IMAP samples in one Hampel window can manufacture
+            # false spikes from legitimate cross-spacecraft offsets.
+            grouped_wind: Dict[str, List[SolarWindData]] = defaultdict(list)
+            for sample in self.solar_wind_data:
+                grouped_wind[sample.source or 'Unknown'].append(sample)
+            repaired_wind: List[SolarWindData] = []
+            aggregate_stats: Dict[str, int] = defaultdict(int)
+            for source_samples in grouped_wind.values():
+                source_clean, source_stats = L1FleetValidator.despike_solar_wind(source_samples)
+                repaired_wind.extend(source_clean)
+                for key, value in source_stats.items():
+                    aggregate_stats[key] += int(value)
+            self.solar_wind_data = sorted(repaired_wind, key=lambda item: item.timestamp)
+            self.spike_filter_stats = dict(aggregate_stats)
+            if self.l1_validation.get('warnings'):
+                for warn in self.l1_validation['warnings']:
+                    print(f"  [!] {warn}")
+                    if 'RTSW' in self.data_quality:
+                        self.data_quality['RTSW'].flags.append(warn)
+            if self.spike_filter_stats.get('total_repaired', 0) > 0:
+                repaired_msg = f"Hampel filter despiked {self.spike_filter_stats['total_repaired']} SEU/saturation sample(s)"
+                print(f"  {repaired_msg}")
+                if 'RTSW' in self.data_quality:
+                    self.data_quality['RTSW'].flags.append(repaired_msg)
+        except Exception as exc:
+            logging.warning('L1 fleet validation skipped: %s', exc)
+
+        # v5.2.0: isolate nowcast, consensus, archival, and verification failures.
+        try:
+            self.verification_summary = self.verifier.summarize(window_days=30)
+        except Exception as exc:
+            logging.warning('Pre-nowcast verification skipped: %s', exc)
+            self.verification_summary = {'horizons': {}, 'degradation_alert': False, 'degraded_horizons': []}
+        try:
+            self.nowcast_result = OperationalNowcastEnsemble(self.store).predict(
+                lookback_days=14, verification_summary=self.verification_summary)
+        except Exception as exc:
+            logging.warning('Geomagnetic nowcaster skipped: %s', exc)
+            self.nowcast_result = {'available': False, 'error': type(exc).__name__}
+        try:
+            self.l1_consensus = L1FleetValidator.reconcile_l1_consensus(
+                self.store, window_minutes=30)
+        except Exception as exc:
+            logging.warning('L1 consensus reconciliation skipped: %s', exc)
+            self.l1_consensus = {
+                'available': False, 'consensus_status': 'ERROR',
+                'sources_used': {}, 'spread': {}, 'error': type(exc).__name__}
+        self.input_sensitivity = NowcastEnsemble.run(self.nowcast_result, self.l1_consensus)
+        self.shock_diagnostics = ShockAnalyzer.characterize_l1_discontinuity(self.solar_wind_data)
+        earth_ips = [
+            ips for ips in self.interplanetary_shocks
+            if str(ips.location or '').lower() in ('earth', 'l1', 'all', '')
+        ]
+        if isinstance(self.shock_diagnostics, dict):
+            self.shock_diagnostics['donki_ips_count'] = len(earth_ips)
+            self.shock_diagnostics['latest_donki_ips_time'] = (
+                earth_ips[0].event_time.isoformat() if earth_ips else None
+            )
+            self.shock_diagnostics['donki_ips_corroborated'] = bool(
+                earth_ips and self.shock_diagnostics.get('shock_detected_screening')
+            )
+        latest_kp = as_float(self.kp_data[-1].get('kp'), 0.0) if self.kp_data else 0.0
+        self.coupling_diagnostics = MagnetosphereCoupling.compute_metrics(self.solar_wind_data, latest_kp)
+        try:
+            if self.nowcast_result.get('available'):
+                self.store.save_nowcast_result(self.nowcast_result)
+        except Exception as exc:
+            logging.warning('Forecast archival skipped: %s', exc)
+        try:
+            self.verification_summary = self.verifier.summarize(window_days=30)
+            self.kp_verification_summary = self.verifier.summarize_kp_three_way(window_days=90)
+        except Exception as exc:
+            logging.warning('Forecast verification skipped: %s', exc)
+            self.verification_summary = {
+                'generated_at': datetime.now(timezone.utc).isoformat(),
+                'window_days': 30, 'degradation_alert': False,
+                'degraded_horizons': [], 'horizons': {},
+                'error': type(exc).__name__}
+
+        # v5.0.0 Upgrade 4: STEREO-A Beacon & Stereoscopic 3D CME De-projection
+        try:
+            print("  Fetching STEREO-A beacon telemetry and stereoscopic 3D CME geometry...")
+            self.stereo_a_beacon = self.stereo_client.fetch_beacon_solar_wind()
+            self.stereoscopic_cmes = [
+                deproj for c in self.cmes
+                for deproj in [self.stereo_client.deproject_cme_stereoscopic(c, self)]
+                if deproj is not None
+            ]
+        except Exception as exc:
+            logging.warning('STEREO-A beacon processing skipped: %s', exc)
+            self.stereo_a_beacon = {'available': False}
+            self.stereoscopic_cmes = []
+
+        self.last_update = datetime.now(timezone.utc)
         print("Data fetch complete.")
+
+    async def fetch_all_data_async(self, *args, **kwargs):
+        """Prefetch independent JSON feeds concurrently, then run blocking science work in a worker."""
+        hours_back = int(kwargs.get('hours_back', args[0] if args else 48))
+        now = datetime.now(timezone.utc)
+        start_date = now - timedelta(hours=hours_back)
+        common = [
+            ENDPOINTS['swpc_xray_3day'], ENDPOINTS['swpc_protons_3day'],
+            ENDPOINTS['swpc_kp'], ENDPOINTS['swpc_kp_forecast'],
+            ENDPOINTS['swpc_alerts'], ENDPOINTS['swpc_flare_prob'],
+            ENDPOINTS['swpc_dst'], ENDPOINTS['swpc_f107'], ENDPOINTS['swpc_regions'],
+        ]
+        common.extend(url for key, url in ENDPOINTS.items() if key.startswith('rtsw_'))
+        jobs = [self.api._get_async(url) for url in dict.fromkeys(common)]
+        date_params = {'startDate': start_date.strftime('%Y-%m-%d'),
+                       'endDate': now.strftime('%Y-%m-%d'),
+                       'api_key': self.api.nasa_api_key}
+        for key in (
+            'donki_flr', 'donki_cme', 'donki_gst',
+            'donki_ips', 'donki_sep', 'donki_hss',
+            'donki_wsa_enlil', 'donki_notifications',
+            'donki_mpc', 'donki_rbe', 'donki_cme_analysis',
+        ):
+            if key in ENDPOINTS:
+                jobs.append(self.api._get_async(ENDPOINTS[key], date_params))
+        try:
+            await asyncio.gather(*jobs, return_exceptions=True)
+            loop = asyncio.get_running_loop()
+            with ThreadPoolExecutor(max_workers=6, thread_name_prefix='smc-science') as executor:
+                return await loop.run_in_executor(
+                    executor, lambda: self._fetch_all_data_sync(*args, **kwargs))
+        finally:
+            await self.api.close_async_session()
+
+    def fetch_all_data(self, *args, **kwargs):
+        """Backward-compatible synchronous entry point with an aiohttp fallback."""
+        if not HAS_AIOHTTP:
+            return self._fetch_all_data_sync(*args, **kwargs)
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(self.fetch_all_data_async(*args, **kwargs))
+        with ThreadPoolExecutor(max_workers=1, thread_name_prefix='smc-async') as executor:
+            return executor.submit(
+                lambda: asyncio.run(self.fetch_all_data_async(*args, **kwargs))).result()
 
     def _assess_data_quality(self, source: str, data: List,
                              expected_interval_minutes: int = 1,
@@ -2624,16 +5848,13 @@ class SpaceWeatherAggregator:
                              assessment_hours: float = 24.0) -> DataQuality:
         """Assess data quality for a given dataset"""
         flags = []
-
         if not data:
             return DataQuality(
                 source=source, completeness=0, freshness=0, reliability=0,
                 record_count=0, data_gaps=0, flags=["No data available"]
             )
-
         record_count = len(data)
         now = datetime.now(timezone.utc)
-
         try:
             latest = max(d.timestamp for d in data if hasattr(d, 'timestamp'))
             age_minutes = (now - latest).total_seconds() / 60
@@ -2651,8 +5872,7 @@ class SpaceWeatherAggregator:
                 key=lambda x: x.timestamp
             )
             for i in range(1, len(sorted_data)):
-                gap = (sorted_data[i].timestamp
-                       - sorted_data[i - 1].timestamp).total_seconds() / 60
+                gap = (sorted_data[i].timestamp - sorted_data[i - 1].timestamp).total_seconds() / 60
                 if gap > expected_interval_minutes * 3:
                     data_gaps += 1
 
@@ -2677,14 +5897,11 @@ class SpaceWeatherAggregator:
         """Assess SWPC data quality"""
         flags = []
         total_records = len(self.kp_data) + len(self.alerts)
-
         if not self.kp_data:
             flags.append("No Kp data")
         if not self.alerts:
             flags.append("No alerts data")
-
         completeness = min(100.0, total_records / 50 * 100)
-
         freshness = 0.0
         if self.kp_data:
             latest_dt = parse_swpc_time(self.kp_data[-1].get('time_tag'))
@@ -2693,10 +5910,8 @@ class SpaceWeatherAggregator:
                 freshness = max(0.0, 100 - age * 10)
             else:
                 flags.append("Cannot parse Kp timestamps")
-
         reliability = (completeness * 0.5 + freshness * 0.5)
         data_gaps = len([f for f in flags if 'No' in f])
-
         return DataQuality(
             source="NOAA Space Weather Prediction Center",
             completeness=completeness, freshness=freshness,
@@ -2706,18 +5921,24 @@ class SpaceWeatherAggregator:
 
     def _assess_donki_quality(self) -> DataQuality:
         """Assess DONKI endpoint health without penalizing quiet conditions."""
-        total_records = len(self.flares) + len(self.cmes) + len(self.geomagnetic_storms)
+        total_records = (
+            len(self.flares) + len(self.cmes) + len(self.geomagnetic_storms)
+            + len(self.interplanetary_shocks) + len(self.sep_events)
+            + len(self.high_speed_streams) + len(self.wsa_enlil_simulations)
+            + len(self.donki_notifications) + len(self.magnetopause_crossings)
+            + len(self.radiation_belt_enhancements) + len(self.cme_analyses)
+        )
         if not self.donki_available:
             return DataQuality(
                 source="NASA DONKI", completeness=0.0, freshness=0.0,
                 reliability=0.0, record_count=0, data_gaps=0,
                 flags=["UNAVAILABLE: " + "; ".join(self.donki_errors)])
-        # Successful valid responses represent complete feed retrieval even when
-        # a quiet Sun produces few or zero events.
-        completeness = 100.0
+        degraded = self.donki_status == 'DEGRADED'
+        completeness = 85.0 if degraded else 100.0
         freshness = 100.0
-        reliability = 100.0 if not self.donki_errors else 85.0
-        flags = [f"Feed retrieval successful; {total_records} recent event record(s)"]
+        reliability = 85.0 if degraded else 100.0
+        status_text = 'DEGRADED' if degraded else 'AVAILABLE'
+        flags = [f"{status_text}: {total_records} recent event record(s)"]
         if total_records == 0:
             flags.append("Quiet interval: no recent DONKI events")
         if self.donki_errors:
@@ -2751,13 +5972,15 @@ class SpaceWeatherAggregator:
             uncertainty_hours, method = 10.0, 'Drag-based screening estimate'
         else:
             uncertainty_hours, method = 14.0, 'Drag-based screening estimate'
+        dist = CMEArrivalUncertainty.estimate(cme, nominal_eta=eta)
         return {
             'eta': eta,
             'lower': eta - timedelta(hours=uncertainty_hours),
             'upper': eta + timedelta(hours=uncertainty_hours),
             'uncertainty_hours': uncertainty_hours,
             'method': method,
-            'transit_hours': (eta-cme.start_time).total_seconds()/3600.0,
+            'transit_hours': (eta - cme.start_time).total_seconds() / 3600.0,
+            'speed_uncertainty_distribution': json_safe_value(dist) if dist else None,
             'assumption': 'Configurable screening range, not a validated confidence interval',
         }
 
@@ -2775,31 +5998,32 @@ class SpaceWeatherAggregator:
             return []
         if all(not math.isfinite(value) for value in values.values()):
             return []
-        scales = {'kp':9.0,'dst':500.0,'speed':1200.0,'bz':50.0}
-        weights = {'kp':0.35,'dst':0.30,'speed':0.20,'bz':0.15}
-        scored=[]
+        scales = {'kp': 9.0, 'dst': 500.0, 'speed': 1200.0, 'bz': 50.0}
+        weights = {'kp': 0.35, 'dst': 0.30, 'speed': 0.20, 'bz': 0.15}
+        scored = []
         for event in HISTORICAL_STORM_CATALOG:
-            distance=0.0; total=0.0; compared=[]
-            for feature,weight in weights.items():
-                observed=values.get(feature); reference=event.get(feature)
+            distance = 0.0
+            total = 0.0
+            compared = []
+            for feature, weight in weights.items():
+                observed = values.get(feature)
+                reference = event.get(feature)
                 if reference is None or observed is None or not math.isfinite(observed):
                     continue
-                difference=min(1.0,abs(observed-float(reference))/scales[feature])
-                distance += weight*difference; total += weight; compared.append(feature)
+                difference = min(1.0, abs(observed - float(reference)) / scales[feature])
+                distance += weight * difference
+                total += weight
+                compared.append(feature)
             if total == 0:
                 continue
-            similarity=max(0.0,100.0*(1.0-distance/total))
-            scored.append({**event,'similarity':round(similarity,1),
-                           'compared_features':compared,
-                           'disclaimer':'Pattern similarity, not an impact forecast'})
-        return sorted(scored,key=lambda item:item['similarity'],reverse=True)[:max(0,top_n)]
+            similarity = max(0.0, 100.0 * (1.0 - distance / total))
+            scored.append({**event, 'similarity': round(similarity, 1),
+                           'compared_features': compared,
+                           'disclaimer': 'Pattern similarity, not an impact forecast'})
+        return sorted(scored, key=lambda item: item['similarity'], reverse=True)[:max(0, top_n)]
 
     def get_multispacecraft_comparison(self, tolerance_seconds: int = 90) -> Dict:
-        """Return the latest solar-wind values from every available RTSW source.
-
-        The tolerance is retained as metadata for later nearest-time matching;
-        this latest-sample summary does not imply simultaneous measurements.
-        """
+        """Return the latest solar-wind values from every available RTSW source."""
         if not self.solar_wind_data:
             return {}
         latest_by_source = {}
@@ -2811,7 +6035,7 @@ class SpaceWeatherAggregator:
         return {
             source: {
                 'timestamp': data.timestamp.isoformat(),
-                'age_seconds': max(0.0, (now-data.timestamp).total_seconds()),
+                'age_seconds': max(0.0, (now - data.timestamp).total_seconds()),
                 'speed': data.speed, 'density': data.density,
                 'temperature': data.temperature, 'bz': data.bz, 'bt': data.bt,
                 'dynamic_pressure': data.dynamic_pressure,
@@ -2824,7 +6048,6 @@ class SpaceWeatherAggregator:
     def get_current_conditions(self) -> Dict:
         """Get current space weather conditions"""
         now = datetime.now(timezone.utc)
-
         current_xray = None
         current_xray_class = "N/A"
         peak_24h_xray = None
@@ -2832,16 +6055,14 @@ class SpaceWeatherAggregator:
         avg_24h_xray = 0.0
 
         if self.xray_data:
-            recent = [x for x in self.xray_data
-                      if (now - x.timestamp).total_seconds() < 1800]
+            recent = [x for x in self.xray_data if (now - x.timestamp).total_seconds() < 1800]
             if not recent:
                 recent = self.xray_data[-1:]
             if recent:
                 current_xray = recent[-1].flux_long
                 current_xray_class = self._flux_to_class(current_xray)
 
-            last_24h = [x for x in self.xray_data
-                        if (now - x.timestamp).total_seconds() < 86400]
+            last_24h = [x for x in self.xray_data if (now - x.timestamp).total_seconds() < 86400]
             if last_24h:
                 peak_24h_xray = max(x.flux_long for x in last_24h)
                 peak_24h_class = self._flux_to_class(peak_24h_xray)
@@ -2857,52 +6078,38 @@ class SpaceWeatherAggregator:
                 elif recent_avg < older_avg * 0.67:
                     xray_trend = "Falling"
 
-        current_proton_10 = 0.0
-        current_proton_50 = 0.0
-        current_proton_100 = 0.0
-        peak_72h_proton = 0.0
-
+        current_proton_10 = current_proton_50 = current_proton_100 = peak_72h_proton = 0.0
         if self.proton_data:
-            recent = [p for p in self.proton_data
-                      if (now - p.timestamp).total_seconds() < 1800]
+            recent = [p for p in self.proton_data if (now - p.timestamp).total_seconds() < 1800]
             if not recent:
                 recent = self.proton_data[-1:]
             if recent:
                 current_proton_10 = recent[-1].flux_10mev
                 current_proton_50 = recent[-1].flux_50mev
                 current_proton_100 = recent[-1].flux_100mev
-
-            last_72h = [p for p in self.proton_data
-                        if (now - p.timestamp).total_seconds() < 259200]
+            last_72h = [p for p in self.proton_data if (now - p.timestamp).total_seconds() < 259200]
             if last_72h:
                 peak_72h_proton = max(p.flux_10mev for p in last_72h)
 
-        current_sw_speed = 0.0
-        current_sw_density = 0.0
-        current_sw_temp = 0.0
-        current_bz = 0.0
-        current_bt = 0.0
-        current_bx = 0.0
-        current_by = 0.0
+        current_sw_speed = current_sw_density = current_sw_temp = 0.0
+        current_bz = current_bt = current_bx = current_by = 0.0
         current_coupling = float('nan')
         sw_source = "No data"
 
         if self.solar_wind_data:
             latest = self.solar_wind_data[-1]
-            current_sw_speed = latest.speed
-            current_sw_density = latest.density
-            current_sw_temp = latest.temperature
-            current_bz = latest.bz
-            current_bt = latest.bt
-            current_bx = latest.bx if latest.bx is not None else 0.0
-            current_by = latest.by if latest.by is not None else 0.0
+            current_sw_speed = float(latest.speed) if is_finite_number(latest.speed) else 0.0
+            current_sw_density = float(latest.density) if is_finite_number(latest.density) else 0.0
+            current_sw_temp = float(latest.temperature) if is_finite_number(latest.temperature) else 0.0
+            current_bz = float(latest.bz) if is_finite_number(latest.bz) else float('nan')
+            current_bt = float(latest.bt) if is_finite_number(latest.bt) else float('nan')
+            current_bx = float(latest.bx) if is_finite_number(latest.bx) else 0.0
+            current_by = float(latest.by) if is_finite_number(latest.by) else 0.0
             current_coupling = latest.coupling
             sw_source = latest.source
 
-        current_kp = 0.0
-        max_24h_kp = 0.0
+        current_kp = max_24h_kp = 0.0
         min_24h_kp = 9.0
-
         if self.kp_data:
             current_kp = self.kp_data[-1].get('kp', 0.0)
             for kp in self.kp_data[-8:]:
@@ -2912,84 +6119,60 @@ class SpaceWeatherAggregator:
         else:
             min_24h_kp = 0.0
 
-        current_dst = 0.0
-        if self.dst_data:
-            current_dst = self.dst_data[-1].get('dst', 0.0)
-
+        current_dst = self.dst_data[-1].get('dst', 0.0) if self.dst_data else 0.0
         s_scale = self._proton_to_s_scale(current_proton_10)
         proton_storm = current_proton_10 >= 10
         g_scale = self._kp_to_g_scale(current_kp)
         r_scale = self._flux_to_r_scale(current_xray or 0.0)
 
-        if current_bz <= -10 and current_sw_speed >= 500:
+        bz_finite = is_finite_number(current_bz)
+        if bz_finite and current_bz <= -10 and current_sw_speed >= 500:
             geoeffectiveness = "High"
-        elif current_bz <= -5 or current_sw_speed >= 450:
+        elif (bz_finite and current_bz <= -5) or current_sw_speed >= 450:
             geoeffectiveness = "Moderate"
-        elif current_bz < 0:
+        elif bz_finite and current_bz < 0:
             geoeffectiveness = "Low"
         else:
             geoeffectiveness = "Very Low"
 
         return {
             'xray': {
-                'current_flux': current_xray,
-                'classification': current_xray_class,
-                'r_scale': r_scale,
-                'peak_24h': peak_24h_xray,
-                'peak_24h_class': peak_24h_class,
-                'avg_24h': avg_24h_xray,
+                'current_flux': current_xray, 'classification': current_xray_class,
+                'r_scale': r_scale, 'peak_24h': peak_24h_xray,
+                'peak_24h_class': peak_24h_class, 'avg_24h': avg_24h_xray,
                 'trend': xray_trend
             },
             'protons': {
-                'flux_10mev': current_proton_10,
-                'flux_50mev': current_proton_50,
-                'flux_100mev': current_proton_100,
-                's_scale': s_scale,
-                'storm_active': proton_storm,
-                'peak_72h': peak_72h_proton
+                'flux_10mev': current_proton_10, 'flux_50mev': current_proton_50,
+                'flux_100mev': current_proton_100, 's_scale': s_scale,
+                'storm_active': proton_storm, 'peak_72h': peak_72h_proton
             },
             'solar_wind': {
-                'speed': current_sw_speed,
-                'density': current_sw_density,
-                'temperature': current_sw_temp,
-                'bz': current_bz,
-                'bt': current_bt,
-                'bx': current_bx,
-                'by': current_by,
-                'coupling': current_coupling,
-                'geoeffectiveness': geoeffectiveness,
+                'speed': current_sw_speed, 'density': current_sw_density,
+                'temperature': current_sw_temp, 'bz': current_bz,
+                'bt': current_bt, 'bx': current_bx, 'by': current_by,
+                'coupling': current_coupling, 'geoeffectiveness': geoeffectiveness,
                 'source': sw_source
             },
             'geomagnetic': {
-                'kp': current_kp,
-                'g_scale': g_scale,
-                'dst': current_dst,
-                'max_24h_kp': max_24h_kp,
-                'min_24h_kp': min_24h_kp
+                'kp': current_kp, 'g_scale': g_scale, 'dst': current_dst,
+                'max_24h_kp': max_24h_kp, 'min_24h_kp': min_24h_kp
             }
         }
 
     @staticmethod
     def auroral_boundary_latitude(kp: float) -> float:
-        """Return a bounded Kp-derived screening estimate in geomagnetic degrees."""
         kp = max(0.0, min(9.0, as_float(kp)))
         return max(40.0, min(70.0, 67.0 - 2.5 * kp))
 
     @staticmethod
     def _latest_before(records: List, stamp: datetime, time_getter) -> Optional[Any]:
-        """Return the latest valid record at or before a grid time."""
         eligible = [r for r in records if time_getter(r) and time_getter(r) <= stamp]
         return max(eligible, key=time_getter) if eligible else None
 
     def build_risk_timeline(self, hours_back: int = 72, hours_forward: int = 48,
                             step_hours: int = 3) -> List[Dict]:
-        """Return historical and forecast risk points without inventing forecasts.
-
-        Historical points use last observation carried forward. Future points
-        contain geomagnetic risk from Kp forecast and an X-ray screening risk
-        from the official flare probabilities. Proton and solar-wind forecasts
-        remain None because no dedicated forecast product is loaded.
-        """
+        """Return historical and forecast risk points without inventing forecasts."""
         if not HAS_NUMPY and hours_forward > 0:
             print("  NumPy unavailable - risk timeline limited to historical data only.")
             hours_forward = 0
@@ -3006,34 +6189,38 @@ class SpaceWeatherAggregator:
             pr = self._latest_before(self.proton_data, stamp, lambda r: r.timestamp)
             sw = self._latest_before(self.solar_wind_data, stamp, lambda r: r.timestamp)
             candidates = [(t, r) for t, r in kp_rows if t and t <= stamp]
-            kp = as_float(max(candidates, key=lambda x:x[0])[1].get('kp')) if candidates else 0.0
-            xscore,_ = self.risk_engine.calculate_xray_risk(xr.flux_long if xr else 0.0,
-                                                             self._flux_to_class(xr.flux_long) if xr else 'N/A')
-            pscore,_ = self.risk_engine.calculate_proton_risk(pr.flux_10mev if pr else 0.0)
-            gscore,_ = self.risk_engine.calculate_geomagnetic_risk(kp)
-            sscore,_ = self.risk_engine.calculate_solar_wind_risk(
+            kp = as_float(max(candidates, key=lambda x: x[0])[1].get('kp')) if candidates else 0.0
+            xscore, _ = self.risk_engine.calculate_xray_risk(
+                xr.flux_long if xr else 0.0, self._flux_to_class(xr.flux_long) if xr else 'N/A')
+            pscore, _ = self.risk_engine.calculate_proton_risk(pr.flux_10mev if pr else 0.0)
+            gscore, _ = self.risk_engine.calculate_geomagnetic_risk(kp)
+            sscore, _ = self.risk_engine.calculate_solar_wind_risk(
                 sw.speed if sw else 0.0, sw.bz if sw and math.isfinite(sw.bz) else 0.0,
                 sw.density if sw else 0.0)
-            composite = round(0.30*xscore + 0.25*pscore + 0.25*gscore + 0.20*sscore)
-            points.append({'timestamp':stamp,'kind':'historical','xray':xscore,'proton':pscore,
-                           'geomagnetic':gscore,'solar_wind':sscore,'composite':composite})
+            weights = self.risk_engine.weights
+            composite = round(
+                weights['xray'] * xscore + weights['proton'] * pscore +
+                weights['geomagnetic'] * gscore + weights['solar_wind'] * sscore
+            )
+            points.append({'timestamp': stamp, 'kind': 'historical', 'xray': xscore, 'proton': pscore,
+                           'geomagnetic': gscore, 'solar_wind': sscore, 'composite': composite})
         mprob = as_float(get_key(self.flare_probabilities, 'm_class_1_day', 'm_class', 'm'))
         xprob = as_float(get_key(self.flare_probabilities, 'x_class_1_day', 'x_class', 'x'))
-        flare_screen = min(100.0, 0.6*mprob + 1.0*xprob)
+        flare_screen = min(100.0, 0.6 * mprob + 1.0 * xprob)
         forecast_rows = [(parse_swpc_time(r.get('time_tag')), r) for r in self.kp_forecast]
         for index in range(1, int(hours_forward / step_hours) + 1):
-            stamp = now + timedelta(hours=index*step_hours)
-            nearest = min(((abs((t-stamp).total_seconds()),r) for t,r in forecast_rows if t), default=None)
-            if nearest and nearest[0] <= step_hours*3600*1.6:
-                kp = max(0.0,min(9.0,as_float(nearest[1].get('kp'))))
-                gscore,_ = self.risk_engine.calculate_geomagnetic_risk(kp)
+            stamp = now + timedelta(hours=index * step_hours)
+            nearest = min(((abs((t - stamp).total_seconds()), r) for t, r in forecast_rows if t), default=None)
+            if nearest and nearest[0] <= step_hours * 3600 * 1.6:
+                kp = max(0.0, min(9.0, as_float(nearest[1].get('kp'))))
+                gscore, _ = self.risk_engine.calculate_geomagnetic_risk(kp)
             else:
                 gscore = None
             known = [v for v in (flare_screen, gscore) if v is not None]
-            composite = round(sum(known)/len(known)) if known else None
-            points.append({'timestamp':stamp,'kind':'forecast','xray':flare_screen,
-                           'proton':None,'geomagnetic':gscore,'solar_wind':None,
-                           'composite':composite})
+            composite = round(sum(known) / len(known)) if known else None
+            points.append({'timestamp': stamp, 'kind': 'forecast', 'xray': flare_screen,
+                           'proton': None, 'geomagnetic': gscore, 'solar_wind': None,
+                           'composite': composite})
         return points
 
     def risk_trend_24h(self) -> Dict:
@@ -3059,9 +6246,7 @@ class SpaceWeatherAggregator:
         """Get summary of recent events"""
         now = datetime.now(timezone.utc)
         cutoff = now - timedelta(hours=hours)
-
         recent_flares = [f for f in self.flares if f.start_time >= cutoff]
-
         flare_counts = {'X': 0, 'M': 0, 'C': 0, 'B': 0, 'A': 0}
         significant_flares = []
 
@@ -3074,38 +6259,54 @@ class SpaceWeatherAggregator:
 
         recent_cmes = [c for c in self.cmes if c.start_time >= cutoff]
         earth_directed_cmes = [c for c in recent_cmes if c.is_earth_directed]
-
         valid_cme_speeds = [
             float(c.speed) for c in recent_cmes
-            if c.speed is not None and math.isfinite(float(c.speed))
-            and float(c.speed) > 0.0
+            if c.speed is not None and math.isfinite(float(c.speed)) and float(c.speed) > 0.0
         ]
         cme_stats = {
             'total': len(recent_cmes),
             'earth_directed': len(earth_directed_cmes),
             'speed_records': len(valid_cme_speeds),
             'missing_speed_records': len(recent_cmes) - len(valid_cme_speeds),
-            'avg_speed': (sum(valid_cme_speeds) / len(valid_cme_speeds)
-                          if valid_cme_speeds else None),
+            'avg_speed': (sum(valid_cme_speeds) / len(valid_cme_speeds) if valid_cme_speeds else None),
             'max_speed': max(valid_cme_speeds) if valid_cme_speeds else None,
             'min_speed': min(valid_cme_speeds) if valid_cme_speeds else None,
         }
-
         recent_storms = [s for s in self.geomagnetic_storms if s.start_time >= cutoff]
-
+        recent_ips = [s for s in self.interplanetary_shocks if s.event_time >= cutoff]
+        recent_sep = [s for s in self.sep_events if s.event_time >= cutoff]
+        recent_hss = [s for s in self.high_speed_streams if s.event_time >= cutoff]
+        recent_enlil = [s for s in self.wsa_enlil_simulations if s.model_completion_time >= cutoff]
+        recent_mpc = [s for s in self.magnetopause_crossings if s.event_time >= cutoff]
+        recent_rbe = [s for s in self.radiation_belt_enhancements if s.event_time >= cutoff]
+        recent_cme_analyses = [
+            a for a in self.cme_analyses
+            if isinstance(a, dict)
+            and (parse_swpc_time(a.get('time21_5')) or datetime.min.replace(tzinfo=timezone.utc)) >= cutoff
+        ]
+        recent_notifications = [
+            n.metadata_dict() for n in self.donki_notifications
+            if n.message_issue_time >= cutoff
+        ]
+        arrival_windows = [
+            w for c in earth_directed_cmes
+            for w in [self.estimate_cme_arrival_window(c)]
+            if w is not None
+        ]
         return {
-            'flares': {
-                'total': len(recent_flares),
-                'by_class': flare_counts,
-                'significant': significant_flares,
-                'all': recent_flares
-            },
-            'cmes': {
-                'stats': cme_stats,
-                'earth_directed': earth_directed_cmes,
-                'all': recent_cmes
-            },
-            'geomagnetic_storms': recent_storms
+            'flares': {'total': len(recent_flares), 'by_class': flare_counts,
+                       'significant': significant_flares, 'all': recent_flares},
+            'cmes': {'stats': cme_stats, 'earth_directed': earth_directed_cmes,
+                     'arrival_windows': arrival_windows, 'all': recent_cmes},
+            'geomagnetic_storms': recent_storms,
+            'interplanetary_shocks': recent_ips,
+            'sep_events': recent_sep,
+            'high_speed_streams': recent_hss,
+            'wsa_enlil_simulations': recent_enlil,
+            'magnetopause_crossings': recent_mpc,
+            'radiation_belt_enhancements': recent_rbe,
+            'cme_analyses': recent_cme_analyses,
+            'donki_notifications': recent_notifications,
         }
 
     def get_threats(self, hours_forward: int = 48) -> List[str]:
@@ -3122,17 +6323,22 @@ class SpaceWeatherAggregator:
         for cme in self.cmes:
             if not cme.is_earth_directed:
                 continue
-
             eta = self.estimate_cme_eta(cme)
             if eta is None:
                 continue
-
             hours_until = (eta - now).total_seconds() / 3600
             if 0 < hours_until <= hours_forward:
-                threats.append(
-                    f"Earth-directed CME arrival in ~{int(hours_until)} hours "
-                    f"({int(cme.speed)} km/s)"
-                )
+                deproj = self.stereo_client.deproject_cme_stereoscopic(cme, self)
+                if deproj and deproj.get('v_3d_deprojected_kms'):
+                    threats.append(
+                        f"Earth-directed CME arrival in ~{int(hours_until)} hours "
+                        f"(POS {int(cme.speed)} km/s | 3D de-projected {int(deproj['v_3d_deprojected_kms'])} km/s)"
+                    )
+                else:
+                    threats.append(
+                        f"Earth-directed CME arrival in ~{int(hours_until)} hours "
+                        f"({int(cme.speed)} km/s)"
+                    )
 
         if self.proton_data:
             recent_protons = [p for p in self.proton_data
@@ -3169,51 +6375,73 @@ class SpaceWeatherAggregator:
             if latest.bz <= -10:
                 threats.append(f"Strongly southward IMF: Bz={latest.bz:.1f} nT")
 
+        recent_ips = [
+            s for s in self.interplanetary_shocks
+            if (now - s.event_time).total_seconds() < 86400
+            and str(s.location or '').lower() in ('earth', 'l1', 'all', '')
+        ]
+        if recent_ips:
+            threats.append(
+                f"DONKI Interplanetary Shock (IPS) catalogued at {recent_ips[0].event_time:%Y-%m-%d %H:%M UTC} ({recent_ips[0].location})"
+            )
+        recent_sep = [
+            s for s in self.sep_events
+            if (now - s.event_time).total_seconds() < 86400
+        ]
+        if recent_sep:
+            threats.append(
+                f"DONKI Solar Energetic Particle (SEP) event catalogued at {recent_sep[0].event_time:%Y-%m-%d %H:%M UTC}"
+            )
+        recent_hss = [
+            s for s in self.high_speed_streams
+            if (now - s.event_time).total_seconds() < 86400
+        ]
+        if recent_hss:
+            threats.append(
+                f"DONKI High-Speed Stream (HSS) active since {recent_hss[0].event_time:%Y-%m-%d %H:%M UTC}"
+            )
+
+        # v5.0.0 L1 Divergence & SSC Horizon Threats
+        if self.l1_validation.get('divergence_detected'):
+            threats.extend(self.l1_validation.get('warnings', []))
+        ssc = (self.nowcast_result.get('ssc_detection') or {})
+        if ssc.get('ssc_horizon_alert'):
+            threats.append(ssc['summary'])
+
         return threats
 
     def estimate_cme_eta(self, cme: CME) -> Optional[datetime]:
-        '''Predicted L1 arrival for a CME, using its Enlil time if given.
-
-        Drag-corrected transit time. The constant-speed 1 AU / v form is
-        biased in opposite directions at the two ends of the speed range,
-        so it is not used. The model below is dimensionally consistent
-        and bounded by the ambient wind in both directions:
-
-          d      = 1 AU - 1.5e6 km, the Sun to L1 path
-          w      = 400 km/s ambient solar wind
-          u0     = v0 - w
-          t_est  = d / ((v0 + w) / 2)
-          v_eff  = w + u0 / (1 + gamma |u0| t_est)
-
-        gamma is 1e-7 km^-1, the standard drag parameter. A CME faster
-        than the ambient wind is decelerated toward w; a slower one is
-        dragged up toward w.
-        '''
+        """Predicted L1 arrival for a CME using WSA-Enlil or drag-corrected transit time."""
         if cme.estimated_arrival:
             return cme.estimated_arrival
+        if cme.start_time and getattr(self, 'wsa_enlil_simulations', None):
+            for sim in self.wsa_enlil_simulations:
+                if not sim.estimated_shock_arrival_time:
+                    continue
+                for ci in sim.cme_inputs:
+                    ci_start = parse_swpc_time(ci.get('start_time'))
+                    if ci_start and abs((ci_start - cme.start_time).total_seconds()) <= 3600:
+                        return sim.estimated_shock_arrival_time
         if not cme.start_time or not cme.speed or cme.speed <= 0:
             return None
 
         distance_km = 1.496e8 - 1.5e6
         ambient = 400.0
-        gamma = 1.0e-7  # km^-1, typical drag parameter
+        gamma = 1.0e-7
 
         u0 = cme.speed - ambient
         v_mean = max(0.5 * (cme.speed + ambient), 200.0)
         t_est_seconds = distance_km / v_mean
 
         denom = 1.0 + gamma * abs(u0) * t_est_seconds
-        v_eff = ambient + u0 / denom
-        v_eff = max(v_eff, 200.0)
+        v_eff = max(ambient + u0 / denom, 200.0)
 
         travel_time_hours = (distance_km / v_eff) / 3600.0
         return cme.start_time + timedelta(hours=travel_time_hours)
 
     def _flux_to_class(self, flux: float) -> str:
-        """Convert X-ray flux to flare classification"""
         if not flux or flux <= 0:
             return "N/A"
-
         if flux >= 1e-4:
             return f"X{flux / 1e-4:.1f}"
         elif flux >= 1e-5:
@@ -3226,7 +6454,6 @@ class SpaceWeatherAggregator:
             return f"A{flux / 1e-8:.1f}"
 
     def _flux_to_r_scale(self, flux: float) -> Tuple[int, str]:
-        """Convert X-ray flux to NOAA R-scale"""
         if flux >= 2e-3:
             return 5, "R5 (Extreme)"
         elif flux >= 1e-3:
@@ -3240,7 +6467,6 @@ class SpaceWeatherAggregator:
         return 0, "R0 (None)"
 
     def _proton_to_s_scale(self, flux_10mev: float) -> int:
-        """Convert proton flux to NOAA S-scale"""
         if flux_10mev >= 100000:
             return 5
         elif flux_10mev >= 10000:
@@ -3254,7 +6480,6 @@ class SpaceWeatherAggregator:
         return 0
 
     def _kp_to_g_scale(self, kp: float) -> int:
-        """Convert Kp index to NOAA G-scale"""
         if kp >= 9:
             return 5
         elif kp >= 8:
@@ -3266,8 +6491,6 @@ class SpaceWeatherAggregator:
         elif kp >= 5:
             return 1
         return 0
-
-
 # ============================================================================
 # VISUALISATION LAYER
 # ============================================================================
@@ -3316,6 +6539,8 @@ class SpaceWeatherVisualizer:
         self.figures: List[Dict[str, str]] = []
         self.images: List[Dict[str, str]] = []
         self.unavailable_figures: List[Dict[str, str]] = []
+        self.plate_registry: List[Dict[str, Any]] = []
+        self.psp_plot_stats: Dict[str, Dict[str, int]] = {}
 
         for directory in (self.output_dir, self.figure_dir, self.image_dir, self.fits_dir):
             os.makedirs(directory, exist_ok=True)
@@ -3356,7 +6581,6 @@ class SpaceWeatherVisualizer:
             'timezone': 'UTC',
         })
 
-
     def _has_numpy(self) -> bool:
         """Return whether NumPy is available to this visualizer instance."""
         return HAS_NUMPY
@@ -3385,12 +6609,7 @@ class SpaceWeatherVisualizer:
 
     def _crop_science_content(self, path: str, threshold: int = 12,
                               padding_fraction: float = 0.04) -> str:
-        """Crop broad empty borders while retaining the main solar/coronal field.
-
-        Rows and columns must contain a meaningful fraction of non-background
-        pixels. This rejects tiny footer text and avoids the small-disk result
-        produced by merely placing a square quicklook on a 16:9 canvas.
-        """
+        """Crop broad empty borders while retaining the main solar/coronal field."""
         if not HAS_PIL or not getattr(self, '_has_numpy', lambda: False)():
             return path
         with Image.open(path) as source:
@@ -3407,8 +6626,8 @@ class SpaceWeatherVisualizer:
             top, bottom = int(ys[0]), int(ys[-1]) + 1
             pad_x = int((right - left) * padding_fraction)
             pad_y = int((bottom - top) * padding_fraction)
-            box = (max(0, left-pad_x), max(0, top-pad_y),
-                   min(rgb.width, right+pad_x), min(rgb.height, bottom+pad_y))
+            box = (max(0, left - pad_x), max(0, top - pad_y),
+                   min(rgb.width, right + pad_x), min(rgb.height, bottom + pad_y))
             cropped = rgb.crop(box)
             suffix = Path(path).suffix.lower()
             if suffix in ('.jpg', '.jpeg'):
@@ -3427,14 +6646,14 @@ class SpaceWeatherVisualizer:
         background = background or self.PALETTE['paper']
         with Image.open(path) as source:
             source = source.convert('RGB')
-            # Scale both down and up so the main science content fills the
-            # 2K frame. thumbnail() only shrinks and was the reason small
-            # source disks stayed small on a large black canvas.
             scale = min(self.output_width / source.width,
                         self.output_height / source.height)
             target_size = (max(1, int(round(source.width * scale))),
                            max(1, int(round(source.height * scale))))
-            source = source.resize(target_size, LANCZOS_FILTER)
+            if LANCZOS_FILTER is None:
+                source = source.resize(target_size)
+            else:
+                source = source.resize(target_size, LANCZOS_FILTER)
             canvas = Image.new('RGB', (self.output_width, self.output_height), background)
             left = (self.output_width - source.width) // 2
             top = (self.output_height - source.height) // 2
@@ -3870,10 +7089,18 @@ class SpaceWeatherVisualizer:
         axes[0].set_ylim(0, max(values + [1]) * 1.25)
         axes[0].grid(axis='x', visible=False)
 
-        components = [('X-ray', risk['xray_risk'], 0.30),
-                      ('Protons', risk['proton_risk'], 0.25),
-                      ('Geomagnetic', risk['geomagnetic_risk'], 0.25),
-                      ('Solar wind', risk['solar_wind_risk'], 0.20)]
+        default_weights = {
+            'xray': 0.30,
+            'proton': 0.25,
+            'geomagnetic': 0.25,
+            'solar_wind': 0.20,
+        }
+        risk_engine = getattr(self.agg, 'risk_engine', None)
+        weights = getattr(risk_engine, 'weights', default_weights)
+        components = [('X-ray', risk['xray_risk'], weights['xray']),
+                      ('Protons', risk['proton_risk'], weights['proton']),
+                      ('Geomagnetic', risk['geomagnetic_risk'], weights['geomagnetic']),
+                      ('Solar wind', risk['solar_wind_risk'], weights['solar_wind'])]
         labels = [f"{name} x{weight:.2f}" for name, _, weight in components]
         scores = [score for _, score, _ in components]
         positions = list(range(len(components)))
@@ -3926,44 +7153,51 @@ class SpaceWeatherVisualizer:
 
     def plot_cme_arrival_windows(self) -> Optional[str]:
         """Two-panel CME launch and Earth-arrival screening timeline."""
-        earth=[c for c in self.agg.cmes if c.is_earth_directed and c.speed>0]
-        windows=[(c,self.agg.estimate_cme_arrival_window(c)) for c in earth]
-        windows=[item for item in windows if item[1] is not None]
-        if not HAS_MATPLOTLIB or not windows:
-            self._unavailable('cme_arrival_windows','CME arrival windows',
-                              'No Earth-directed CME with a usable arrival estimate was available.')
-            return None
-        windows=sorted(windows,key=lambda item:item[0].start_time)[:8]
-        fig,(launch_ax,arrival_ax)=plt.subplots(2,1,figsize=(10.8,7.0),gridspec_kw={'height_ratios':[1.15,1]})
-        launch_ax.scatter([c.start_time for c,w in windows],[c.speed for c,w in windows],
-                          s=75,color=self.PALETTE['primary'],edgecolor='white',linewidth=.6)
-        for index,(cme,window) in enumerate(windows,1):
-            launch_ax.annotate(f'CME {index}',(cme.start_time,cme.speed),xytext=(5,6),
-                               textcoords='offset points',fontsize=8)
-        launch_ax.set_ylabel('Plane-of-sky speed [km/s]')
-        launch_ax.set_title('Earth-directed CME launches')
-        self._time_axis(launch_ax,mark_now=False)
-        y_positions = list(range(len(windows)))
-        for y,(cme,window) in zip(y_positions,windows):
-            arrival_ax.barh(y,(window['upper']-window['lower']).total_seconds()/86400.0,
-                            left=mdates.date2num(window['lower']),height=.48,
-                            color=self.SCALE_COLORS[3],alpha=.28)
-            arrival_ax.plot(window['eta'],y,'o',color=self.PALETTE['tertiary'],ms=7)
-            arrival_ax.text(window['eta'],y+.27,
-                            f"ETA {window['eta']:%Y-%m-%d %H:%M} +/-{window['uncertainty_hours']:.0f} h",
-                            fontsize=7,ha='center')
-        arrival_ax.set_yticks(y_positions)
-        arrival_ax.set_yticklabels([f"CME {i+1}: {c.speed:.0f} km/s" for i,(c,w) in enumerate(windows)])
-        arrival_ax.set_title('Screening Earth-arrival windows')
-        arrival_ax.xaxis_date(); self._time_axis(arrival_ax)
-        return self._save(fig,'cme_arrival_windows','CME arrival windows',
-                          'Dedicated launch and arrival timelines. Bands are configurable screening ranges, not validated confidence intervals.')
+        open_figures = set(plt.get_fignums())
+        try:
+            earth = [c for c in self.agg.cmes if c.is_earth_directed and c.speed and c.speed > 0]
+            windows = [(c, self.agg.estimate_cme_arrival_window(c)) for c in earth]
+            windows = [item for item in windows if item[1] is not None]
+            if not HAS_MATPLOTLIB or not windows:
+                self._unavailable('cme_arrival_windows', 'CME arrival windows',
+                                  'No Earth-directed CME with a usable arrival estimate was available.')
+                return None
+            windows = sorted(windows, key=lambda item: item[0].start_time)[:8]
+            fig, (launch_ax, arrival_ax) = plt.subplots(
+                2, 1, figsize=(10.8, 7.0), gridspec_kw={'height_ratios': [1.15, 1]})
+            launch_ax.scatter([c.start_time for c, _ in windows], [c.speed for c, _ in windows],
+                              s=75, color=self.PALETTE['primary'], edgecolor='white', linewidth=.6)
+            for index, (cme, _) in enumerate(windows, 1):
+                launch_ax.annotate(f'CME {index}', (cme.start_time, cme.speed), xytext=(5, 6),
+                                   textcoords='offset points', fontsize=8)
+            launch_ax.set_ylabel('Plane-of-sky speed [km/s]')
+            launch_ax.set_title('Earth-directed CME launches')
+            self._time_axis(launch_ax, mark_now=False)
+            y_positions = list(range(len(windows)))
+            for y, (_, window) in zip(y_positions, windows):
+                arrival_ax.barh(y, (window['upper'] - window['lower']).total_seconds() / 86400.0,
+                                left=mdates.date2num(window['lower']), height=.48,
+                                color=self.SCALE_COLORS[3], alpha=.28)
+                arrival_ax.plot(window['eta'], y, 'o', color=self.PALETTE['tertiary'], ms=7)
+                arrival_ax.text(window['eta'], y + .27,
+                                f"ETA {window['eta']:%Y-%m-%d %H:%M} +/-{window['uncertainty_hours']:.0f} h",
+                                fontsize=7, ha='center')
+            arrival_ax.set_yticks(y_positions)
+            arrival_ax.set_yticklabels([f"CME {i + 1}: {c.speed:.0f} km/s" for i, (c, _) in enumerate(windows)])
+            arrival_ax.set_title('Screening Earth-arrival windows')
+            arrival_ax.xaxis_date()
+            self._time_axis(arrival_ax)
+            return self._save(fig, 'cme_arrival_windows', 'CME arrival windows',
+                              'Dedicated launch and arrival timelines. Bands are configurable screening ranges, not validated confidence intervals.')
+        finally:
+            for figure_number in set(plt.get_fignums()) - open_figures:
+                plt.close(figure_number)
 
     def plot_cme_speed_vs_transit(self) -> Optional[str]:
         """Plot speed against modeled transit time; this is not validation."""
         rows = []
         for cme in self.agg.cmes:
-            if not cme.is_earth_directed or cme.speed <= 0:
+            if not cme.is_earth_directed or not cme.speed or cme.speed <= 0:
                 continue
             window = self.agg.estimate_cme_arrival_window(cme)
             if window and math.isfinite(window['transit_hours']):
@@ -3986,9 +7220,9 @@ class SpaceWeatherVisualizer:
                 model = np.poly1d(coefficients)
                 xline = np.linspace(speeds.min(), speeds.max(), 100)
                 predicted = model(speeds)
-                total = np.sum((hours-hours.mean())**2)
-                residual = np.sum((hours-predicted)**2)
-                r2 = 1.0-residual/total if total > 0 else float('nan')
+                total = np.sum((hours - hours.mean()) ** 2)
+                residual = np.sum((hours - predicted) ** 2)
+                r2 = 1.0 - residual / total if total > 0 else float('nan')
                 ax.plot(xline, model(xline), '--', color=self.PALETTE['accent'],
                         lw=1.5, label=f'Linear fit (R2={r2:.2f})')
                 caption += (f' Linear-fit R-squared={r2:.2f}; '
@@ -3998,7 +7232,8 @@ class SpaceWeatherVisualizer:
         ax.set_xlabel('Plane-of-sky speed [km/s]')
         ax.set_ylabel('Modeled transit time to L1 [hours]')
         ax.set_title('CME speed versus modeled transit time')
-        ax.legend(); ax.grid(True, alpha=.3)
+        ax.legend()
+        ax.grid(True, alpha=.3)
         return self._save(fig, 'cme_speed_transit',
                           'CME speed versus modeled transit time', caption)
 
@@ -4006,38 +7241,51 @@ class SpaceWeatherVisualizer:
         if not HAS_MATPLOTLIB or not self.agg.solar_regions:
             self._unavailable('active_regions', 'NOAA active regions', 'No usable active-region records were available.')
             return None
-        regions=self.agg.solar_regions[:12]; xpos=list(range(len(regions))); width=.24
-        fig,ax=plt.subplots(figsize=(10.5,4.8))
-        ax.bar([x-width for x in xpos],[r['c_probability'] for r in regions],width,label='C-class',color=self.SCALE_COLORS[1])
-        ax.bar(xpos,[r['m_probability'] for r in regions],width,label='M-class',color=self.SCALE_COLORS[3])
-        ax.bar([x+width for x in xpos],[r['x_probability'] for r in regions],width,label='X-class',color=self.SCALE_COLORS[5])
-        ax.set_xticks(xpos); ax.set_xticklabels([f"AR {r['region']}\n{r['location']}" for r in regions],fontsize=7)
-        ax.set_ylim(0,100); ax.set_ylabel('24-hour probability [%]'); ax.set_title('NOAA active-region flare probabilities'); ax.legend(ncol=3)
-        return self._save(fig,'active_regions','NOAA active regions','Latest NOAA region-level C, M and X flare probabilities.')
+        regions = self.agg.solar_regions[:12]
+        xpos = list(range(len(regions)))
+        width = .24
+        fig, ax = plt.subplots(figsize=(10.5, 4.8))
+        ax.bar([x - width for x in xpos], [r['c_probability'] for r in regions], width, label='C-class', color=self.SCALE_COLORS[1])
+        ax.bar(xpos, [r['m_probability'] for r in regions], width, label='M-class', color=self.SCALE_COLORS[3])
+        ax.bar([x + width for x in xpos], [r['x_probability'] for r in regions], width, label='X-class', color=self.SCALE_COLORS[5])
+        ax.set_xticks(xpos)
+        ax.set_xticklabels([f"AR {r['region']}\n{r['location']}" for r in regions], fontsize=7)
+        ax.set_ylim(0, 100)
+        ax.set_ylabel('24-hour probability [%]')
+        ax.set_title('NOAA active-region flare probabilities')
+        ax.legend(ncol=3)
+        return self._save(fig, 'active_regions', 'NOAA active regions', 'Latest NOAA region-level C, M and X flare probabilities.')
 
     def plot_risk_timeline(self) -> Optional[str]:
         hours_back = max(1, int(getattr(self, 'hours_back', 72)))
         hours_forward = max(0, int(getattr(self, 'hours_forward', 48)))
-        rows=self.agg.build_risk_timeline(hours_back,hours_forward,3)
+        rows = self.agg.build_risk_timeline(hours_back, hours_forward, 3)
         if not HAS_MATPLOTLIB or not rows:
-            self._unavailable('risk_timeline','Risk timeline and forecast','No usable historical or forecast risk data were available.')
+            self._unavailable('risk_timeline', 'Risk timeline and forecast', 'No usable historical or forecast risk data were available.')
             return None
-        fig,ax=plt.subplots(figsize=(10.5,4.8)); now=datetime.now(timezone.utc)
-        hist=[r for r in rows if r['kind']=='historical']; forecast=[r for r in rows if r['kind']=='forecast']
-        colors={'xray':self.PALETTE['primary'],'proton':self.PALETTE['accent'],
-                'geomagnetic':self.PALETTE['tertiary'],'solar_wind':self.PALETTE['secondary'],
-                'composite':self.PALETTE['ink']}
-        for key,label in (('xray','X-ray'),('proton','Protons'),('geomagnetic','Geomagnetic'),
-                          ('solar_wind','Solar wind'),('composite','Composite')):
-            ax.plot([r['timestamp'] for r in hist],[r[key] for r in hist],'-',lw=1.5,
-                    color=colors[key],label=label)
-            valid=[r for r in forecast if r[key] is not None]
-            if valid: ax.plot([r['timestamp'] for r in valid],[r[key] for r in valid],'--',lw=1.8,color=colors[key])
+        fig, ax = plt.subplots(figsize=(10.5, 4.8))
+        now = datetime.now(timezone.utc)
+        hist = [r for r in rows if r['kind'] == 'historical']
+        forecast = [r for r in rows if r['kind'] == 'forecast']
+        colors = {'xray': self.PALETTE['primary'], 'proton': self.PALETTE['accent'],
+                  'geomagnetic': self.PALETTE['tertiary'], 'solar_wind': self.PALETTE['secondary'],
+                  'composite': self.PALETTE['ink']}
+        for key, label in (('xray', 'X-ray'), ('proton', 'Protons'), ('geomagnetic', 'Geomagnetic'),
+                           ('solar_wind', 'Solar wind'), ('composite', 'Composite')):
+            ax.plot([r['timestamp'] for r in hist], [r[key] for r in hist], '-', lw=1.5,
+                    color=colors[key], label=label)
+            valid = [r for r in forecast if r[key] is not None]
+            if valid:
+                ax.plot([r['timestamp'] for r in valid], [r[key] for r in valid], '--', lw=1.8, color=colors[key])
         if forecast:
-            ax.axvspan(now,forecast[-1]['timestamp'],color=self.PALETTE['rule'],alpha=.3,label='Forecast interval')
-        ax.axvline(now,color='black',lw=1.1); ax.set_ylim(0,100); ax.set_ylabel('Risk [0-100]')
-        ax.set_title(f'Risk timeline: past {hours_back} hours and next {hours_forward} hours'); ax.legend(ncol=3); self._time_axis(ax,mark_now=False)
-        return self._save(fig,'risk_timeline','Historical and forecast risk timeline',
+            ax.axvspan(now, forecast[-1]['timestamp'], color=self.PALETTE['rule'], alpha=.3, label='Forecast interval')
+        ax.axvline(now, color='black', lw=1.1)
+        ax.set_ylim(0, 100)
+        ax.set_ylabel('Risk [0-100]')
+        ax.set_title(f'Risk timeline: past {hours_back} hours and next {hours_forward} hours')
+        ax.legend(ncol=3)
+        self._time_axis(ax, mark_now=False)
+        return self._save(fig, 'risk_timeline', 'Historical and forecast risk timeline',
                           'Solid lines are reconstructed history. Dashed lines use only forecast-capable Kp and flare-probability products; unavailable future components are omitted.')
 
     def plot_risk_trend(self) -> Optional[str]:
@@ -4063,9 +7311,19 @@ class SpaceWeatherVisualizer:
                     [row[key] for row in rows],
                     lw=2 if key == 'composite' else 1,
                     label=label, color=color)
+
+        def format_stat(value: Any) -> str:
+            try:
+                numeric = float(value)
+            except (TypeError, ValueError):
+                return 'N/A'
+            return f'{numeric:.0f}' if math.isfinite(numeric) else 'N/A'
+
         ax.text(.99, .96,
-                f"{trend['label']} | current {trend['current']:.0f} | "
-                f"min {trend['minimum']:.0f} | max {trend['maximum']:.0f}",
+                f"{trend.get('label', 'Unavailable')} | "
+                f"current {format_stat(trend.get('current'))} | "
+                f"min {format_stat(trend.get('minimum'))} | "
+                f"max {format_stat(trend.get('maximum'))}",
                 transform=ax.transAxes, ha='right', va='top', weight='bold')
         ax.set_ylim(0, 100)
         ax.set_ylabel('Risk [0-100]')
@@ -4078,48 +7336,68 @@ class SpaceWeatherVisualizer:
         )
 
     def plot_f107_cycle(self) -> Optional[str]:
-        rows=self.agg.f107_series
-        if not HAS_MATPLOTLIB or len(rows)<2:
-            self._unavailable('f107_cycle','F10.7 solar-cycle context','Monthly F10.7 series unavailable.')
+        rows = self.agg.f107_series
+        if not HAS_MATPLOTLIB or len(rows) < 2:
+            self._unavailable('f107_cycle', 'F10.7 solar-cycle context', 'Monthly F10.7 series unavailable.')
             return None
-        fig,ax=plt.subplots(figsize=(10.5,4.5))
-        ax.plot([r['timestamp'] for r in rows],[r['flux'] for r in rows],color=self.PALETTE['rule'],lw=.8,label='Monthly')
-        smooth=[r for r in rows if r['smoothed_13m'] is not None]
-        if smooth: ax.plot([r['timestamp'] for r in smooth],[r['smoothed_13m'] for r in smooth],color=self.PALETTE['primary'],lw=2,label='13-month smooth')
-        current=rows[-1]; ax.scatter([current['timestamp']],[current['flux']],s=55,color=self.PALETTE['tertiary'],zorder=4,label=f"Current {current['flux']:.1f} sfu")
-        ax.set_ylabel('F10.7 [sfu]'); ax.set_title('Solar-cycle context from monthly F10.7 cm radio flux'); ax.legend(); self._time_axis(ax,mark_now=False)
-        return self._save(fig,'f107_cycle','F10.7 solar-cycle context','Monthly F10.7 radio flux with centered 13-month smoothing and latest value highlighted.')
+        fig, ax = plt.subplots(figsize=(10.5, 4.5))
+        ax.plot([r['timestamp'] for r in rows], [r['flux'] for r in rows], color=self.PALETTE['rule'], lw=.8, label='Monthly')
+        smooth = [r for r in rows if r['smoothed_13m'] is not None]
+        if smooth:
+            ax.plot([r['timestamp'] for r in smooth], [r['smoothed_13m'] for r in smooth], color=self.PALETTE['primary'], lw=2, label='13-month smooth')
+        current = rows[-1]
+        ax.scatter([current['timestamp']], [current['flux']], s=55, color=self.PALETTE['tertiary'], zorder=4, label=f"Current {current['flux']:.1f} sfu")
+        ax.set_ylabel('F10.7 [sfu]')
+        ax.set_title('Solar-cycle context from monthly F10.7 cm radio flux')
+        ax.legend()
+        self._time_axis(ax, mark_now=False)
+        return self._save(fig, 'f107_cycle', 'F10.7 solar-cycle context', 'Monthly F10.7 radio flux with centered 13-month smoothing and latest value highlighted.')
 
     def plot_auroral_boundary(self) -> Optional[str]:
         if not HAS_MATPLOTLIB or (not self.agg.kp_data and not self.agg.kp_forecast):
-            self._unavailable('auroral_boundary','Estimated auroral boundary','Observed and forecast Kp data were unavailable.')
+            self._unavailable('auroral_boundary', 'Estimated auroral boundary', 'Observed and forecast Kp data were unavailable.')
             return None
-        rows=[]
-        for kind,source in (('Observed',self.agg.kp_data),('Forecast',self.agg.kp_forecast)):
+        rows = []
+        for kind, source in (('Observed', self.agg.kp_data), ('Forecast', self.agg.kp_forecast)):
             for row in source:
-                stamp=parse_swpc_time(row.get('time_tag'))
-                if stamp: rows.append((stamp,self.agg.auroral_boundary_latitude(row.get('kp')),kind))
+                stamp = parse_swpc_time(row.get('time_tag'))
+                if stamp:
+                    rows.append((stamp, self.agg.auroral_boundary_latitude(row.get('kp')), kind))
         if not rows:
-            self._unavailable('auroral_boundary','Estimated auroral boundary','Kp timestamps could not be parsed.')
+            self._unavailable('auroral_boundary', 'Estimated auroral boundary', 'Kp timestamps could not be parsed.')
             return None
-        fig,ax=plt.subplots(figsize=(10.5,4.3))
-        for kind,style in (('Observed','-'),('Forecast','--')):
-            subset=sorted((r for r in rows if r[2]==kind),key=lambda x:x[0])
-            if subset: ax.plot([r[0] for r in subset],[r[1] for r in subset],style,lw=1.5,label=kind)
-        ax.set_ylim(70,40); ax.set_ylabel('Estimated geomagnetic latitude [deg]'); ax.set_title('Estimated equatorward auroral boundary'); ax.legend(); self._time_axis(ax)
-        return self._save(fig,'auroral_boundary','Estimated auroral boundary','Kp-derived screening estimate only; use OVATION for operational auroral probability.')
+        fig, ax = plt.subplots(figsize=(10.5, 4.3))
+        for kind, style in (('Observed', '-'), ('Forecast', '--')):
+            subset = sorted((r for r in rows if r[2] == kind), key=lambda x: x[0])
+            if subset:
+                ax.plot([r[0] for r in subset], [r[1] for r in subset], style, lw=1.5, label=kind)
+        ax.set_ylim(70, 40)
+        ax.set_ylabel('Estimated geomagnetic latitude [deg]')
+        ax.set_title('Estimated equatorward auroral boundary')
+        ax.legend()
+        self._time_axis(ax)
+        return self._save(fig, 'auroral_boundary', 'Estimated auroral boundary', 'Kp-derived screening estimate only; use OVATION for operational auroral probability.')
 
     @staticmethod
     def _psp_time_to_utc(value: Any) -> datetime:
+        if isinstance(value, datetime):
+            return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+        if HAS_NUMPY and isinstance(value, np.datetime64):
+            ns = int(value.astype('datetime64[ns]').astype('int64'))
+            return datetime.fromtimestamp(ns / 1.0e9, tz=timezone.utc)
+        if isinstance(value, str):
+            parsed = parse_swpc_time(value)
+            if parsed is not None:
+                return parsed
         numeric = float(value)
         absolute = abs(numeric)
-        if absolute > 1.0e17:      # nanoseconds since Unix epoch
+        if absolute > 1.0e17:
             return datetime.fromtimestamp(numeric / 1.0e9, tz=timezone.utc)
-        if absolute > 1.0e14:      # microseconds since Unix epoch
+        if absolute > 1.0e14:
             return datetime.fromtimestamp(numeric / 1.0e6, tz=timezone.utc)
-        if absolute > 1.0e11:      # milliseconds since Unix epoch
+        if absolute > 1.0e11:
             return datetime.fromtimestamp(numeric / 1.0e3, tz=timezone.utc)
-        if absolute > 1.0e8:       # Unix seconds, including modern PSP data
+        if absolute > 1.0e8:
             return datetime.fromtimestamp(numeric, tz=timezone.utc)
         return datetime(1970, 1, 1, tzinfo=timezone.utc) + timedelta(days=numeric)
 
@@ -4136,15 +7414,22 @@ class SpaceWeatherVisualizer:
         return any(token in upper for token in rejected_tokens)
 
     @staticmethod
-    def _psp_series_priority(item) -> Tuple[int, str]:
-        """Sort derived science measurements ahead of less useful numeric arrays."""
+    def _psp_series_priority(item) -> Tuple[int, int, int, str]:
+        """Sort derived science measurements ahead of sectored/sparse arrays."""
         name = str(item[0]).upper()
+        sample_count = 0
+        if len(item) >= 3 and isinstance(item[2], (tuple, list)) and item[2]:
+            try:
+                sample_count = len(item[2][0])
+            except TypeError:
+                sample_count = 0
+        sect_penalty = 1 if 'SECT' in name else 0
         preferred = ('FLUX', 'RATE', 'COUNT', 'INTENSITY', 'DENSITY',
                      'SPEED', 'VELOCITY', 'TEMPERATURE', 'MAG', 'FIELD')
         for index, token in enumerate(preferred):
             if token in name:
-                return index, name
-        return len(preferred), name
+                return index, sect_penalty, -sample_count, name
+        return len(preferred), sect_penalty, -sample_count, name
 
     @staticmethod
     def _psp_series_to_arrays(series: Dict[str, Any],
@@ -4167,7 +7452,10 @@ class SpaceWeatherVisualizer:
             if inside / max(1, len(stamps)) < 0.5:
                 return None
         fill_threshold = 1.0e30
+
         def valid_number(value: Any) -> Optional[float]:
+            if isinstance(value, (list, tuple)) and len(value) == 1:
+                value = value[0]
             try:
                 number = float(value)
             except (TypeError, ValueError, OverflowError):
@@ -4175,6 +7463,17 @@ class SpaceWeatherVisualizer:
             if not math.isfinite(number) or abs(number) >= fill_threshold:
                 return None
             return number
+
+        def flatten_numbers(row_obj: Any) -> List[Optional[float]]:
+            flat: List[Optional[float]] = []
+            if isinstance(row_obj, (list, tuple)):
+                for elem in row_obj:
+                    if isinstance(elem, (list, tuple)):
+                        flat.extend(flatten_numbers(elem))
+                    else:
+                        flat.append(valid_number(elem))
+            return flat
+
         output_stamps = []
         output_primary = []
         output_components = None
@@ -4199,15 +7498,28 @@ class SpaceWeatherVisualizer:
                 output_primary.append(math.sqrt(sum(number * number for number in numbers)))
                 for component, number in zip(output_components, numbers):
                     component.append(number)
+            if len(output_stamps) < 2:
+                output_stamps = []
+                output_primary = []
+                output_components = None
+                for stamp, row in zip(stamps, values):
+                    if not isinstance(row, (list, tuple)):
+                        continue
+                    valid_bins = [n for n in (valid_number(v) for v in row) if n is not None]
+                    if not valid_bins:
+                        continue
+                    output_stamps.append(stamp)
+                    output_primary.append(sum(valid_bins))
         elif kind == 'spectrum':
             for stamp, row in zip(stamps, values):
                 if not isinstance(row, (list, tuple)):
                     continue
-                numbers = [valid_number(value) for value in row]
-                if not numbers or any(number is None for number in numbers):
+                numbers = flatten_numbers(row)
+                valid_bins = [num for num in numbers if num is not None]
+                if not valid_bins:
                     continue
                 output_stamps.append(stamp)
-                output_primary.append(sum(numbers))
+                output_primary.append(sum(valid_bins))
         else:
             return None
         if len(output_stamps) < 2 or not output_primary:
@@ -4220,174 +7532,182 @@ class SpaceWeatherVisualizer:
         return output_stamps, output_primary, output_components
 
     def _plot_psp_context(self, key, context, requested):
-        if not HAS_MATPLOTLIB:
-            return None
-        if not context or 'series' not in context:
-            if requested:
-                self._unavailable(f'psp_{key}', PSP_PRODUCTS.get(key, {}).get('title', key),
-                                  'PSP product was requested but returned no series.')
-            return None
-        expected_start = parse_swpc_time(context.get('start'))
-        expected_end = parse_swpc_time(context.get('end'))
-        raw_count = len(context['series'])
-        metadata_count = 0
-        invalid_count = 0
-        items = []
-        for name, payload in context['series'].items():
-            if self._psp_is_metadata_series(name):
-                metadata_count += 1
-                continue
-            parsed = self._psp_series_to_arrays(
-                payload, expected_start=expected_start, expected_end=expected_end)
-            if parsed:
-                items.append((name, payload['kind'], parsed))
-            else:
-                invalid_count += 1
-        context['_plot_stats'] = {
-            'raw': raw_count,
-            'plottable': len(items),
-            'metadata_filtered': metadata_count,
-            'invalid_or_fill': invalid_count,
-            'rendered': min(6, len(items)),
-        }
-        if not items:
-            if requested:
-                self._unavailable(
-                    f'psp_{key}', context.get('title', key),
-                    'No finite science flux/rate series remained after filtering '
-                    'metadata, invalid timestamps, and CDF fill values.')
-            print(f"  {context.get('title', key)}: no plottable science series "
-                  f"({metadata_count} metadata, {invalid_count} invalid/fill-only).")
-            return None
-        items.sort(key=self._psp_series_priority)
-        plottable_count = len(items)
-        if plottable_count > 6:
-            print(f"  {context.get('title', key)}: rendering best 6 of "
-                  f"{plottable_count} plottable science series "
-                  f"({metadata_count} metadata filtered, {invalid_count} invalid/fill-only).")
-        items = items[:6]
-        fig, axes = plt.subplots(
-            len(items), 1, figsize=(12.8, max(3, 2.2 * len(items))),
-            sharex=True, squeeze=False)
-        axes = [row[0] for row in axes]
-        palette = (self.PALETTE['primary'], self.PALETTE['secondary'],
-                   self.PALETTE['tertiary'], self.PALETTE['accent'])
-        for ax, (name, kind, (stamps, magnitudes, components)) in zip(axes, items):
-            ax.plot(stamps, magnitudes, lw=.8, color=palette[0],
-                    label='|value|' if components else 'value')
-            if components:
-                for index, component in enumerate(components):
-                    ax.plot(stamps, component, lw=.5,
-                            color=palette[(index + 1) % len(palette)],
-                            alpha=.65, label=f'component {index + 1}')
-                ax.legend(ncol=4, fontsize=7)
-            ax.set_ylabel(name if len(name) < 40 else name[-38:], fontsize=8)
-            ax.grid(True, alpha=.3)
-            self._time_axis(ax, mark_now=False)
-        axes[-1].set_xlabel('UTC')
-        fig.suptitle(context.get('title', key), fontsize=11, weight='bold')
-        caption = (f"Source: {context.get('source', 'PSP')} "
-                   f"datatype={context.get('datatype')} level={context.get('level')}. "
-                   f"{len(items)} of {plottable_count} plottable science series rendered; "
-                   f"{metadata_count} metadata and {invalid_count} invalid/fill-only series filtered. "
-                   "Delayed science context; excluded from risk scoring.")
-        return self._save(fig, f'psp_{key}', context.get('title', key), caption)
+        open_figures = set(plt.get_fignums())
+        try:
+            if not HAS_MATPLOTLIB:
+                return None
+            if not context or 'series' not in context:
+                if requested:
+                    self._unavailable(f'psp_{key}', PSP_PRODUCTS.get(key, {}).get('title', key),
+                                      'PSP product was requested but returned no series.')
+                return None
+            expected_start = parse_swpc_time(context.get('start'))
+            expected_end = parse_swpc_time(context.get('end'))
+            raw_count = len(context['series'])
+            metadata_count = 0
+            invalid_count = 0
+            items = []
+            for name, payload in context['series'].items():
+                if self._psp_is_metadata_series(name):
+                    metadata_count += 1
+                    continue
+                parsed = self._psp_series_to_arrays(
+                    payload, expected_start=expected_start, expected_end=expected_end)
+                if parsed:
+                    items.append((name, payload['kind'], parsed))
+                else:
+                    invalid_count += 1
+            self.psp_plot_stats[key] = {
+                'raw': raw_count,
+                'plottable': len(items),
+                'metadata_filtered': metadata_count,
+                'invalid_or_fill': invalid_count,
+                'rendered': min(6, len(items)),
+            }
+            if not items:
+                if requested:
+                    self._unavailable(
+                        f'psp_{key}', context.get('title', key),
+                        'No finite science flux/rate series remained after filtering '
+                        'metadata, invalid timestamps, and CDF fill values.')
+                print(f"  {context.get('title', key)}: no plottable science series "
+                      f"({metadata_count} metadata, {invalid_count} invalid/fill-only).")
+                return None
+            items.sort(key=self._psp_series_priority)
+            plottable_count = len(items)
+            if plottable_count > 6:
+                print(f"  {context.get('title', key)}: rendering best 6 of "
+                      f"{plottable_count} plottable science series "
+                      f"({metadata_count} metadata filtered, {invalid_count} invalid/fill-only).")
+            items = items[:6]
+            fig, axes = plt.subplots(
+                len(items), 1, figsize=(12.8, max(3, 2.2 * len(items))),
+                sharex=True, squeeze=False)
+            axes = [row[0] for row in axes]
+            palette = (self.PALETTE['primary'], self.PALETTE['secondary'],
+                       self.PALETTE['tertiary'], self.PALETTE['accent'])
+            for ax, (name, kind, (stamps, magnitudes, components)) in zip(axes, items):
+                ax.plot(stamps, magnitudes, lw=.8, color=palette[0],
+                        label='|value|' if components else 'value')
+                if components:
+                    for index, component in enumerate(components):
+                        ax.plot(stamps, component, lw=.5,
+                                color=palette[(index + 1) % len(palette)],
+                                alpha=.65, label=f'component {index + 1}')
+                    ax.legend(ncol=4, fontsize=7)
+                ax.set_ylabel(name if len(name) < 40 else name[-38:], fontsize=8)
+                ax.grid(True, alpha=.3)
+                self._time_axis(ax, mark_now=False)
+            axes[-1].set_xlabel('UTC')
+            fig.suptitle(context.get('title', key), fontsize=11, weight='bold')
+            caption = (f"Source: {context.get('source', 'PSP')} "
+                       f"datatype={context.get('datatype')} level={context.get('level')}. "
+                       f"{len(items)} of {plottable_count} plottable science series rendered; "
+                       f"{metadata_count} metadata and {invalid_count} invalid/fill-only series filtered. "
+                       "Delayed science context; excluded from risk scoring.")
+            return self._save(fig, f'psp_{key}', context.get('title', key), caption)
+        finally:
+            for figure_number in set(plt.get_fignums()) - open_figures:
+                plt.close(figure_number)
 
     def plot_psp_contexts(self) -> None:
-        requested=set(getattr(self.agg,'psp_requested_keys',[]) or []); contexts=getattr(self.agg,'psp_contexts',{}) or {}
-        for key,context in contexts.items():
-            if key!='wispr':
-                try: self._plot_psp_context(key,context,key in requested)
-                except Exception as exc: print(f"  PSP figure failed ({key}): {type(exc).__name__}: {exc}")
+        requested = set(getattr(self.agg, 'psp_requested_keys', []) or [])
+        contexts = getattr(self.agg, 'psp_contexts', {}) or {}
+        for key, context in contexts.items():
+            if key != 'wispr':
+                open_figures = set(plt.get_fignums())
+                try:
+                    self._plot_psp_context(key, context, key in requested)
+                except Exception as exc:
+                    print(f"  PSP figure failed ({key}): {type(exc).__name__}: {exc}")
+                finally:
+                    for figure_number in set(plt.get_fignums()) - open_figures:
+                        plt.close(figure_number)
 
     # ------------------------------------------------------------------
     # Observatory imagery
     # ------------------------------------------------------------------
 
-    # here is the modification of _save_sunpy_map for 2.4.4: it now takes
-    # an optional cmap argument, and knows that a signed magnetogram
-    # must not be clipped with the asymmetric (1, 99.8) percentile that
-    # is correct for the non-negative AIA channels.
     def _save_sunpy_map(self, solar_map, key: str, title: str, caption: str,
                         fits_path: str, cmap: Optional[str] = None):
         """Render a science FITS observation with SunPy and record provenance."""
-        observed = solar_map.date.to_datetime(timezone=timezone.utc)
-        if observed.tzinfo is None:
-            observed = observed.replace(tzinfo=timezone.utc)
-        age = (datetime.now(timezone.utc) - observed).total_seconds() / 60
-        if age > 360:
-            raise RuntimeError(f"Observation is stale ({age:.0f} minutes)")
-
-        path = os.path.join(self.image_dir, f"{key}.png")
-        fig = plt.figure(figsize=(12.8, 7.2), facecolor='black')
-        ax = fig.add_subplot(projection=solar_map)
-
-        plot_kwargs = {}
-        if cmap is not None:
-            plot_kwargs['cmap'] = cmap
-
-        # HMI magnetograms are signed: a symmetric (1, 99.8) percentile
-        # clip saturates the weaker of the two polarities and hides
-        # quiet-region flux. AIA is non-negative, so the asymmetric
-        # clip is fine there.
-        is_signed = cmap == 'hmimag'
-
+        open_figures = set(plt.get_fignums())
         try:
-            if is_signed:
+            observed = solar_map.date.to_datetime(timezone=timezone.utc)
+            if observed.tzinfo is None:
+                observed = observed.replace(tzinfo=timezone.utc)
+            age = (datetime.now(timezone.utc) - observed).total_seconds() / 60
+            if age > 360:
+                raise RuntimeError(f"Observation is stale ({age:.0f} minutes)")
+
+            path = os.path.join(self.image_dir, f"{key}.png")
+            fig = plt.figure(figsize=(12.8, 7.2), facecolor='black')
+            ax = fig.add_subplot(projection=solar_map)
+
+            plot_kwargs = {}
+            if cmap is not None:
+                plot_kwargs['cmap'] = cmap
+            is_signed = cmap == 'hmimag'
+
+            try:
+                if is_signed:
+                    solar_map.plot(axes=ax, **plot_kwargs)
+                else:
+                    solar_map.plot(axes=ax,
+                                   clip_interval=(1, 99.8) * u.percent,
+                                   **plot_kwargs)
+            except TypeError:
                 solar_map.plot(axes=ax, **plot_kwargs)
-            else:
-                solar_map.plot(axes=ax,
-                               clip_interval=(1, 99.8) * u.percent,
-                               **plot_kwargs)
-        except TypeError:
-            solar_map.plot(axes=ax, **plot_kwargs)
 
-        try:
-            solar_map.draw_limb(axes=ax)
-            solar_map.draw_grid(axes=ax, grid_spacing=15 * u.deg)
-        except Exception:
-            pass
+            try:
+                solar_map.draw_limb(axes=ax)
+                solar_map.draw_grid(axes=ax, grid_spacing=15 * u.deg)
+            except Exception:
+                pass
 
-        ax.set_title("")
-        try:
-            ax.coords[0].set_axislabel('')
-            ax.coords[1].set_axislabel('')
-            ax.coords[0].set_ticks_visible(False)
-            ax.coords[1].set_ticks_visible(False)
-            ax.coords[0].set_ticklabel_visible(False)
-            ax.coords[1].set_ticklabel_visible(False)
-        except Exception:
-            ax.set_axis_off()
+            ax.set_title("")
+            try:
+                ax.coords[0].set_axislabel('')
+                ax.coords[1].set_axislabel('')
+                ax.coords[0].set_ticks_visible(False)
+                ax.coords[1].set_ticks_visible(False)
+                ax.coords[0].set_ticklabel_visible(False)
+                ax.coords[1].set_ticklabel_visible(False)
+            except Exception:
+                ax.set_axis_off()
 
-        # The observation timestamp was previously stored only in metadata.
-        # Draw it on the plate so exported PNG/PDF files remain self-describing.
-        observed_label = observed.strftime('%Y-%m-%d %H:%M:%S UTC')
-        ax.text(0.015, 0.025, observed_label, transform=ax.transAxes,
-                ha='left', va='bottom', fontsize=9, color='white',
-                zorder=20, bbox=dict(boxstyle='round,pad=0.32',
-                                     facecolor='black', edgecolor='white',
-                                     linewidth=0.6, alpha=0.72))
-        ax.text(0.015, 0.975, title, transform=ax.transAxes,
-                ha='left', va='top', fontsize=11, color='white',
-                weight='bold', zorder=20,
-                bbox=dict(boxstyle='round,pad=0.32', facecolor='black',
-                          edgecolor='none', alpha=0.62))
-        fig.set_size_inches(self.output_width / self.dpi,
-                            self.output_height / self.dpi, forward=True)
-        fig.savefig(path, dpi=self.dpi, bbox_inches=None, pad_inches=0)
-        plt.close(fig)
-        source_metrics = self._image_metrics(path)
-        self._crop_science_content(path)
-        self._normalize_image_2k(path, background='#000000')
-        final_metrics = self._image_metrics(path)
+            observed_label = observed.strftime('%Y-%m-%d %H:%M:%S UTC')
+            ax.text(0.015, 0.025, observed_label, transform=ax.transAxes,
+                    ha='left', va='bottom', fontsize=9, color='white',
+                    zorder=20, bbox=dict(boxstyle='round,pad=0.32',
+                                         facecolor='black', edgecolor='white',
+                                         linewidth=0.6, alpha=0.72))
+            ax.text(0.015, 0.975, title, transform=ax.transAxes,
+                    ha='left', va='top', fontsize=11, color='white',
+                    weight='bold', zorder=20,
+                    bbox=dict(boxstyle='round,pad=0.32', facecolor='black',
+                              edgecolor='none', alpha=0.62))
+            fig.set_size_inches(self.output_width / self.dpi,
+                                self.output_height / self.dpi, forward=True)
+            fig.savefig(path, dpi=self.dpi, bbox_inches=None, pad_inches=0)
+            plt.close(fig)
+            source_metrics = self._image_metrics(path)
+            self._crop_science_content(path)
+            self._normalize_image_2k(path, background='#000000')
+            final_metrics = self._image_metrics(path)
 
-        return {'key': key, 'title': title, 'caption': caption, 'path': path,
+            return {
+                'key': key, 'title': title, 'caption': caption, 'path': path,
                 'mime': 'image/png', 'source': 'SunPy Fido / VSO FITS',
                 'observation_time_utc': observed.isoformat(),
                 'fits_file': fits_path,
-                'source_dimensions': f"{source_metrics.get('width','?')} x {source_metrics.get('height','?')}",
-                'final_dimensions': f"{final_metrics.get('width','?')} x {final_metrics.get('height','?')}",
-                'science_fill_percent': final_metrics.get('science_fill_percent')}
+                'source_dimensions': f"{source_metrics.get('width', '?')} x {source_metrics.get('height', '?')}",
+                'final_dimensions': f"{final_metrics.get('width', '?')} x {final_metrics.get('height', '?')}",
+                'science_fill_percent': final_metrics.get('science_fill_percent'),
+            }
+        finally:
+            for figure_number in set(plt.get_fignums()) - open_figures:
+                plt.close(figure_number)
 
     def _fetch_aia(self, key: str, wavelength: int, title: str, caption: str):
         end = Time.now()
@@ -4403,20 +7723,6 @@ class SpaceWeatherVisualizer:
         fits_path = str(files[0])
         return self._save_sunpy_map(sunpy.map.Map(fits_path), key, title, caption, fits_path)
 
-    # here is the modification of _fetch_hmi for 2.4.4: the JSOC export
-    # service has been replaced by the VSO backend. VSO does not need an
-    # email notification address, so JSOC_EMAIL is no longer consulted
-    # anywhere, and the request is served synchronously rather than
-    # through the asynchronous JSOC export queue.
-    #
-    # The two HMI products are selected by their physical observable:
-    #     a.Physobs.los_magnetic_field  -> hmi.M_45s line of sight
-    #                                      magnetogram, in gauss
-    #     a.Physobs.intensity           -> hmi.Ic_45s continuum
-    #                                      intensity image
-    #
-    # The magnetogram is drawn with the diverging 'hmimag' colormap; the
-    # continuum with greyscale.
     @staticmethod
     def _fido_file_count(result) -> int:
         try:
@@ -4426,16 +7732,61 @@ class SpaceWeatherVisualizer:
 
     @staticmethod
     def _fido_latest_record(result):
-        """Return the newest row from the newest non-empty Fido provider block."""
-        candidates = []
-        iterable = () if result is None else result
-        for block in iterable:
+        """Return a one-row Fido block containing the newest timed record."""
+        time_names = ('End Time', 'Start Time', 'Time', 'Date', 'DATE-OBS',
+                      'end_time', 'start_time', 'time', 'date_obs')
+        best_slice = None
+        best_stamp = None
+        fallback = None
+
+        def timestamp_value(value: Any) -> Optional[datetime]:
+            if value is None:
+                return None
+            if isinstance(value, datetime):
+                return (value.replace(tzinfo=timezone.utc) if value.tzinfo is None
+                        else value.astimezone(timezone.utc))
+            candidate = getattr(value, 'datetime', None)
+            if isinstance(candidate, datetime):
+                return (candidate.replace(tzinfo=timezone.utc) if candidate.tzinfo is None
+                        else candidate.astimezone(timezone.utc))
+            stamp = parse_swpc_time(value)
+            if stamp is not None:
+                return stamp
+            if HAS_ASTROPY:
+                try:
+                    return Time(value).to_datetime(timezone=timezone.utc)
+                except Exception:
+                    return None
+            return None
+
+        for block in (() if result is None else result):
             try:
-                if len(block):
-                    candidates.append(block[-1:])
-            except (TypeError, IndexError):
+                length = len(block)
+            except TypeError:
                 continue
-        return candidates[-1] if candidates else None
+            if not length:
+                continue
+            try:
+                fallback = block[-1:]
+            except (TypeError, IndexError):
+                pass
+            names = list(getattr(block, 'colnames', []) or [])
+            name_map = {str(name).lower(): name for name in names}
+            columns = [name_map[name.lower()] for name in time_names
+                       if name.lower() in name_map]
+            for index in range(length):
+                row_stamp = None
+                for column in columns:
+                    try:
+                        row_stamp = timestamp_value(block[index][column])
+                    except (KeyError, TypeError, IndexError):
+                        row_stamp = None
+                    if row_stamp is not None:
+                        break
+                if row_stamp is not None and (best_stamp is None or row_stamp > best_stamp):
+                    best_stamp = row_stamp
+                    best_slice = block[index:index + 1]
+        return best_slice if best_slice is not None else fallback
 
     def _fetch_hmi(self, key: str, physobs, title: str, caption: str):
         """Fetch HMI through staged VSO searches, then optional explicit JSOC series."""
@@ -4563,27 +7914,25 @@ class SpaceWeatherVisualizer:
                 with open(path, 'wb') as handle:
                     handle.write(content)
                 source_metrics = self._image_metrics(path)
-                if entry.get('key', '').startswith(('sdo_', 'lasco_')):
+                if entry.get('key', '').startswith(('sdo_', 'lasco_', 'stereo_')):
                     self._crop_science_content(path)
                 self._normalize_image_2k(path, background='#000000')
                 final_metrics = self._image_metrics(path)
-                return {'key': entry['key'], 'title': entry['title'],
-                        'caption': entry['caption'], 'path': path, 'mime': mime,
-                        'url': url, 'source': 'Operational quicklook',
-                        'observation_time_utc': None,
-                        'source_dimensions': f"{source_metrics.get('width','?')} x {source_metrics.get('height','?')}",
-                        'final_dimensions': f"{final_metrics.get('width','?')} x {final_metrics.get('height','?')}",
-                        'science_fill_percent': final_metrics.get('science_fill_percent')}
+                return {
+                    'key': entry['key'], 'title': entry['title'],
+                    'caption': entry['caption'], 'path': path, 'mime': mime,
+                    'url': url, 'source': 'Operational quicklook',
+                    'observation_time_utc': None,
+                    'source_dimensions': f"{source_metrics.get('width', '?')} x {source_metrics.get('height', '?')}",
+                    'final_dimensions': f"{final_metrics.get('width', '?')} x {final_metrics.get('height', '?')}",
+                    'science_fill_percent': final_metrics.get('science_fill_percent'),
+                }
             except Exception as exc:
                 print(f"  Quicklook unavailable ({entry.get('key', 'unknown')}): "
                       f"{type(exc).__name__}: {exc}")
                 continue
         return None
 
-    # here is the modification of fetch_imagery for 2.4.4: HMI and AIA
-    # are handled on the SunPy/VSO path only and never fall back to the
-    # AIA is SunPy-only. HMI and LASCO may use configured operational
-    # JPEG quicklooks when the science-data request yields no usable map.
     def add_lyra_context_image(self) -> None:
         """Write the validated LYRA daily PNG and add it to the gallery."""
         if not self.include_images:
@@ -4621,20 +7970,48 @@ class SpaceWeatherVisualizer:
             'observation_time_utc': context.get('observation_time_utc') or None,
         })
 
-    def fetch_imagery(self) -> List[Dict[str, str]]:
-        """Fetch observatory imagery.
+    def add_stereo_a_beacon_imagery(self) -> None:
+        """Fetch and normalize real-time STEREO-A COR2 and EUVI 195 beacon plates (v5.0.0)."""
+        if not self.include_images:
+            return
+        stereo_sep = StereoABeaconClient.estimate_stereo_a_separation_deg()
+        entries = [
+            {
+                'key': 'stereo_a_cor2',
+                'title': f'STEREO-A/SECCHI COR2 Beacon ({stereo_sep:+.1f} deg HEE)',
+                'caption': (
+                    'Off-Sun-Earth-line coronagraph (2.5 to 15 solar radii). '
+                    'Provides an approximate geometry-based correction to plane-of-sky CME speed using estimated STEREO-A viewing separation.'
+                ),
+                'urls': [
+                    ENDPOINTS['stereo_a_cor2_latest'],
+                    'https://stereo-ssc.nascom.nasa.gov/beacon/beacon_secchi/latest_512/ahead_cor2_latest.jpg',
+                ],
+            },
+            {
+                'key': 'stereo_a_euvi_195',
+                'title': f'STEREO-A/SECCHI EUVI 195 A Beacon ({stereo_sep:+.1f} deg HEE)',
+                'caption': 'Off-Sun-Earth-line extreme ultraviolet disk context.',
+                'urls': [
+                    ENDPOINTS['stereo_a_euvi_195_latest'],
+                    'https://stereo-ssc.nascom.nasa.gov/beacon/beacon_secchi/latest_512/ahead_euvi_195_latest.jpg',
+                ],
+            },
+        ]
+        for entry in entries:
+            record = self._quicklook(entry)
+            if record:
+                record['source'] = 'NASA STEREO Science Center Beacon'
+                self.images.append(record)
+            else:
+                self._unavailable(entry['key'], entry['title'], 'STEREO-A beacon image unreachable.')
 
-        SDO/AIA, SDO/HMI, and SOHO/LASCO C2/C3 are fetched as science
-        FITS via SunPy/Fido over VSO. HMI and LASCO fall back to configured
-        operational JPEGs when VSO has no usable data; AIA has no web fallback.
-        OVATION aurora and the SWPC synoptic map are quicklook-only products.
-        """
+    def fetch_imagery(self) -> List[Dict[str, str]]:
+        """Fetch observatory imagery."""
         if not self.include_images:
             return []
 
         catalog = {x['key']: x for x in IMAGE_SOURCES}
-
-        # Keys that MUST come from SunPy and are never web-fetched.
         sunpy_only = {
             'sdo_aia_193', 'sdo_aia_304', 'sdo_aia_131',
             'sdo_hmi_magnetogram', 'sdo_hmi_continuum',
@@ -4644,7 +8021,6 @@ class SpaceWeatherVisualizer:
         if HAS_SUNPY and HAS_MATPLOTLIB:
             print("  Fetching SDO/AIA, SDO/HMI, and SOHO/LASCO FITS via Fido/VSO...")
 
-            # --- AIA ---
             for key, wavelength in (('sdo_aia_193', 193),
                                     ('sdo_aia_304', 304),
                                     ('sdo_aia_131', 131)):
@@ -4663,10 +8039,9 @@ class SpaceWeatherVisualizer:
                     print(f"  AIA {key}: no VSO data available, skipping "
                           "(no web fallback for AIA).")
 
-            # --- HMI ---
             hmi_specs = (
                 ('sdo_hmi_magnetogram', a.Physobs.los_magnetic_field),
-                ('sdo_hmi_continuum',   a.Physobs.intensity),
+                ('sdo_hmi_continuum', a.Physobs.intensity),
             )
             for key, physobs in hmi_specs:
                 entry = catalog[key]
@@ -4689,7 +8064,6 @@ class SpaceWeatherVisualizer:
                         self._unavailable(key, entry['title'],
                                           'HMI was unavailable from both VSO and the public quicklook service.')
 
-            # --- LASCO C2/C3 science FITS ---
             for key, detector in (('lasco_c2', 'C2'), ('lasco_c3', 'C3')):
                 entry = catalog[key]
                 try:
@@ -4713,7 +8087,8 @@ class SpaceWeatherVisualizer:
             print("  SunPy or matplotlib unavailable; trying HMI and LASCO public quicklooks.")
             for key in ('sdo_hmi_magnetogram', 'sdo_hmi_continuum',
                         'lasco_c2', 'lasco_c3'):
-                entry = catalog[key]; fallback = self._quicklook(entry)
+                entry = catalog[key]
+                fallback = self._quicklook(entry)
                 if fallback:
                     self.images.append(fallback)
                 else:
@@ -4721,7 +8096,6 @@ class SpaceWeatherVisualizer:
                               else 'HMI retrieval unavailable.')
                     self._unavailable(key, entry['title'], reason)
 
-        # --- Operational quicklooks for the non-SunPy sources only ---
         for entry in IMAGE_SOURCES:
             if entry['key'] in sunpy_only:
                 continue
@@ -4732,12 +8106,11 @@ class SpaceWeatherVisualizer:
         return self.images
 
     def _write_image_manifest(self) -> None:
-        """Write the final manifest after optional LYRA/WISPR additions."""
+        """Write the final manifest after optional LYRA/WISPR/STEREO additions."""
         manifest = os.path.join(self.output_dir, 'image_manifest.json')
         with open(manifest, 'w', encoding='utf-8') as handle:
             json.dump([{**item, 'path': os.path.relpath(item['path'], self.output_dir)}
                        for item in self.images], handle, indent=2)
-
 
     def add_psp_wispr_gallery(self) -> None:
         """Add generated WISPR previews to the existing observatory gallery."""
@@ -4781,22 +8154,35 @@ class SpaceWeatherVisualizer:
                             self.plot_cme_speed_vs_transit, self.plot_active_regions,
                             self.plot_risk_timeline, self.plot_risk_trend, self.plot_f107_cycle,
                             self.plot_auroral_boundary):
+                open_figures = set(plt.get_fignums())
                 try:
                     builder()
-                except Exception as e:
-                    print(f"  Figure failed ({builder.__name__}): {e}")
+                except Exception as exc:
+                    print(f"  Figure failed ({builder.__name__}): {type(exc).__name__}: {exc}")
+                finally:
+                    for figure_number in set(plt.get_fignums()) - open_figures:
+                        plt.close(figure_number)
+            open_figures = set(plt.get_fignums())
             try:
                 self.plot_psp_contexts()
             except Exception as exc:
                 print(f"  PSP context batch failed: {type(exc).__name__}: {exc}")
+            finally:
+                for figure_number in set(plt.get_fignums()) - open_figures:
+                    plt.close(figure_number)
+            open_figures = set(plt.get_fignums())
             try:
                 self.plot_overview(risk, events)
-            except Exception as e:
-                print(f"  Figure failed (plot_overview): {e}")
+            except Exception as exc:
+                print(f"  Figure failed (plot_overview): {type(exc).__name__}: {exc}")
+            finally:
+                for figure_number in set(plt.get_fignums()) - open_figures:
+                    plt.close(figure_number)
         else:
             print("  Matplotlib unavailable, skipping figures.")
 
         self.fetch_imagery()
+        self.add_stereo_a_beacon_imagery()
         self.add_lyra_context_image()
         self.add_psp_wispr_gallery()
         self._write_image_manifest()
@@ -4833,20 +8219,72 @@ class SpaceWeatherVisualizer:
 
     @staticmethod
     def _escape(text: str) -> str:
-        """Minimal HTML escaping for the embedded plain-text report"""
-        return (str(text).replace('&', '&amp;')
-                .replace('<', '&lt;')
-                .replace('>', '&gt;'))
+        """Escape plain text for safe insertion into HTML text and attributes."""
+        return html.escape(str(text), quote=True)
 
-    def build_html_report(self, text_report: str, conditions: Dict,
-                          risk: Dict, interactive_available: bool = False) -> Optional[str]:
-        # Write a self-contained, accessible operational dashboard.
-        now = datetime.now(timezone.utc)
-        outlook = self.agg.get_forecast_outlook()
-        events = self.agg.get_recent_events(hours=72)
-        threats = self.agg.get_threats()
+    def build_plate_registry(self) -> List[Dict[str, Any]]:
+        """Assign one stable plate number and ID for every produced visual."""
+        registry = []
+        for number, item in enumerate(self.figures + self.images, start=1):
+            item['plate_number'] = number
+            item['plate_id'] = f'plate-{number:03d}'
+            registry.append({
+                'plate_number': number,
+                'plate_id': item['plate_id'],
+                'key': item.get('key', 'other'),
+                'title': item.get('title', 'Plate'),
+                'caption': item.get('caption', ''),
+                'path': item.get('path'),
+                'source': item.get('source', 'Generated analysis'),
+                'observed_at': item.get('observed_at') or item.get('observed'),
+                'kind': 'figure' if item in self.figures else 'image',
+            })
+        self.plate_registry = registry
+        return copy.deepcopy(registry)
+
+    def build_html_report(self, text_report: str, conditions: Optional[Dict] = None,
+                          risk: Optional[Dict] = None,
+                          interactive_available: bool = False,
+                          snapshot: Optional[ReportSnapshot] = None) -> Optional[str]:
+        """Write a self-contained, accessible operational dashboard with Live SSE support."""
+        if snapshot is not None:
+            conditions = copy.deepcopy(snapshot.conditions)
+            risk = copy.deepcopy(snapshot.risk)
+            outlook = copy.deepcopy(snapshot.outlook)
+            events = copy.deepcopy(snapshot.events)
+            threats = copy.deepcopy(snapshot.threats)
+            now = snapshot.generated_at
+        else:
+            conditions = conditions or self.agg.get_current_conditions()
+            risk = risk or {}
+            now = datetime.now(timezone.utc)
+            outlook = self.agg.get_forecast_outlook()
+            events = self.agg.get_recent_events(hours=72)
+            threats = self.agg.get_threats()
+        if not self.plate_registry:
+            self.build_plate_registry()
         run_match = re.search(r'Run ID:\s*([^\s]+)', text_report)
-        run_id = run_match.group(1) if run_match else 'N/A'
+        run_id = snapshot.run_id if snapshot is not None else (run_match.group(1) if run_match else 'N/A')
+        report_download_file = ''
+        generated_epoch = now.timestamp()
+        candidates = [os.path.basename(REPORT_DOWNLOAD_FILE) if REPORT_DOWNLOAD_FILE else '',
+                      'space_weather_report.txt']
+        for candidate in dict.fromkeys(name for name in candidates if name):
+            candidate_path = os.path.abspath(os.path.join(self.output_dir, candidate))
+            try:
+                contained = os.path.commonpath(
+                    [os.path.abspath(self.output_dir), candidate_path]) == os.path.abspath(self.output_dir)
+                current_enough = os.path.getmtime(candidate_path) >= generated_epoch - 2.0
+            except (OSError, ValueError):
+                contained = current_enough = False
+            if contained and os.path.isfile(candidate_path) and current_enough:
+                report_download_file = candidate
+                break
+        download_button_html = (
+            '<button id="download-report-open" class="download-report-button" '
+            'type="button">Download full report</button>'
+            if report_download_file else
+            '<span class="download-report-unavailable">Report download unavailable</span>')
 
         def finite(value: Any) -> bool:
             try:
@@ -4878,8 +8316,6 @@ class SpaceWeatherVisualizer:
         wind_time = latest_time(self.agg.solar_wind_data, lambda row: row.timestamp)
         kp_time = latest_time(self.agg.kp_data,
                               lambda row: parse_swpc_time(row.get('time_tag')))
-        forecast_time = latest_time(self.agg.kp_forecast,
-                                    lambda row: parse_swpc_time(row.get('time_tag')))
 
         def utc(stamp: Optional[datetime], short: bool = False) -> str:
             if not stamp:
@@ -4903,15 +8339,19 @@ class SpaceWeatherVisualizer:
         confidence_reason = []
         unavailable_feeds = [key for key, q in self.agg.data_quality.items()
                              if q.status in ('Unavailable', 'Critical')]
+        degraded_feeds = [key for key, q in self.agg.data_quality.items()
+                          if q.status == 'Degraded']
         if unavailable_feeds:
             confidence_reason.append('Unavailable or critical feeds: ' + ', '.join(unavailable_feeds))
+        if degraded_feeds:
+            confidence_reason.append('Degraded feeds (partial endpoint warnings): ' + ', '.join(degraded_feeds))
         if outlook.get('peak_time') is None:
             confidence_reason.append('No usable Kp forecast timestamp')
         if not confidence_reason:
             confidence_reason.append('Primary observations and forecast products are current')
 
         risk_level = esc(risk.get('level', 'UNKNOWN')).lower()
-        risk_class = risk_level if risk_level in {'nominal','minor','moderate','severe','extreme'} else 'unknown'
+        risk_class = risk_level if risk_level in {'nominal', 'minor', 'moderate', 'severe', 'extreme'} else 'unknown'
         r_number, _ = conditions['xray']['r_scale']
         s_number = conditions['protons']['s_scale']
         g_number = conditions['geomagnetic']['g_scale']
@@ -4947,9 +8387,9 @@ class SpaceWeatherVisualizer:
                  utc(wind_time), conditions['solar_wind']['source'],
                  conditions['solar_wind']['geoeffectiveness']),
             card('IMF Bz', fmt(conditions['solar_wind']['bz'], '+.1f'), 'nT',
-                 'SOUTHWARD' if conditions['solar_wind']['bz'] < 0 else 'NORTHWARD',
+                 'UNAVAILABLE' if not finite(conditions['solar_wind']['bz']) else ('SOUTHWARD' if conditions['solar_wind']['bz'] < 0 else 'NORTHWARD'),
                  utc(wind_time), conditions['solar_wind']['source'],
-                 'Sustained southward Bz increases magnetic coupling' if conditions['solar_wind']['bz'] < 0 else 'Northward orientation reduces coupling'),
+                 'IMF Bz telemetry unavailable' if not finite(conditions['solar_wind']['bz']) else ('Sustained southward Bz increases magnetic coupling' if conditions['solar_wind']['bz'] < 0 else 'Northward orientation reduces coupling')),
             card('Planetary Kp', fmt(conditions['geomagnetic']['kp'], '.1f'), '',
                  f'G{g_number}', utc(kp_time), 'NOAA SWPC',
                  f"24-hour maximum Kp {conditions['geomagnetic']['max_24h_kp']:.1f}"),
@@ -4976,17 +8416,12 @@ class SpaceWeatherVisualizer:
             'onclick="downloadHealthCSV()">Download Health CSV</button>'
         )
 
-        # Load up to the last three completed dashboard snapshots. Missing,
-        # malformed, or first-run history remains a normal empty state.
         history_html = ''
         history_path = os.path.join(self.output_dir, 'data', 'history.json')
         try:
             with open(history_path, 'r', encoding='utf-8') as handle:
                 history_rows = json.load(handle)
-            if isinstance(history_rows, list):
-                history_rows = history_rows[-3:]
-            else:
-                history_rows = []
+            history_rows = history_rows[-3:] if isinstance(history_rows, list) else []
             if history_rows:
                 cards = []
                 for history_row in history_rows:
@@ -5030,7 +8465,6 @@ class SpaceWeatherVisualizer:
             return f'<details><summary>Show technical metadata</summary><dl class="meta-grid">{rows}</dl></details>'
 
         def plate(item: Dict, index: int, section: str) -> str:
-            mime = item.get('mime', 'image/png')
             try:
                 uri = os.path.relpath(item['path'], self.output_dir).replace(os.sep, '/')
             except (TypeError, ValueError):
@@ -5051,13 +8485,13 @@ class SpaceWeatherVisualizer:
             if fits_href:
                 controls += f'<a class="image-action" href="{esc(fits_href)}" download>Download FITS</a>'
                 controls += f'<button type="button" class="image-action copy-time" data-time="{esc(observed_label)}">Copy time</button>'
-            return f'''<figure class="plate-card" id="plate-{index}" data-section="{esc(section)}" data-category="{esc(item.get('key','other').split('_')[0])}">
+            return f'''<figure class="plate-card" id="{esc(item.get('plate_id', f'plate-{index}'))}" data-section="{esc(section)}" data-category="{esc(item.get('key','other').split('_')[0])}">
               <button type="button" class="image-button open-image" data-src="{uri}"
                       data-title="{esc(item['title'])}" data-observed="{esc(observed_label)}"
                       aria-label="Enlarge {esc(item['title'])}">
                 <img loading="lazy" src="{uri}" alt="{esc(alt)}">
               </button>
-              <figcaption><div class="plate-heading"><span>Plate {index}</span><h3>{esc(item['title'])}</h3></div>
+              <figcaption><div class="plate-heading"><span>Plate {item.get('plate_number', index)}</span><h3>{esc(item['title'])}</h3></div>
                 <p>{esc(item.get('caption',''))}</p>
                 <p class="obs-line"><strong>Observed:</strong> {esc(observed_label)} &nbsp; <strong>Source:</strong> {esc(item.get('source','Generated analysis'))}</p>
                 <div class="image-controls">{controls}</div>{technical_details(item)}
@@ -5066,7 +8500,10 @@ class SpaceWeatherVisualizer:
         figure_html = ''
         image_html = ''
         plate_index = 300
-        WHITELISTED_KEYS = {'risk_timeline','geomagnetic','auroral_boundary','risk_trend','solar_wind','xray_flux','proton_flux','active_regions','cme_population','cme_arrival_windows','cme_speed_transit','f107_cycle','overview'}
+        WHITELISTED_KEYS = {'risk_timeline', 'geomagnetic', 'auroral_boundary', 'risk_trend',
+                            'solar_wind', 'xray_flux', 'proton_flux', 'active_regions',
+                            'cme_population', 'cme_arrival_windows', 'cme_speed_transit',
+                            'f107_cycle', 'overview'}
         for item in self.figures:
             if item.get('key') in WHITELISTED_KEYS:
                 continue
@@ -5090,24 +8527,26 @@ class SpaceWeatherVisualizer:
         cme_cards = ''
         for index, cme in enumerate(cmes[:6], 1):
             window = self.agg.estimate_cme_arrival_window(cme)
+            deproj = self.agg.stereo_client.deproject_cme_stereoscopic(cme, self.agg)
             if window:
                 arrival = f"{window['lower']:%Y-%m-%d %H:%M} to {window['upper']:%Y-%m-%d %H:%M} UTC"
                 method = window['method']
             else:
                 arrival, method = 'No usable arrival window', 'Unavailable'
+            v3d_str = f"{deproj['v_3d_deprojected_kms']:.0f} km/s" if deproj else "N/A"
             cme_cards += f'''<article class="event-card"><h3>CME {index}</h3>
               <dl><div><dt>Observed</dt><dd>{cme.start_time:%Y-%m-%d %H:%M UTC}</dd></div>
-              <div><dt>Speed</dt><dd>{cme.speed:.0f} km/s</dd></div>
-              <div><dt>Direction</dt><dd>Earth-directed candidate</dd></div>
+              <div><dt>POS Speed</dt><dd>{cme.speed:.0f} km/s</dd></div>
+              <div><dt>3D Speed (STEREO)</dt><dd>{esc(v3d_str)}</dd></div>
               <div><dt>Arrival window</dt><dd>{esc(arrival)}</dd></div>
               <div><dt>Method</dt><dd>{esc(method)}</dd></div></dl>
-              <p class="small">Screening estimate, not a precise operational arrival prediction.</p></article>'''
+              <p class="small">Screening estimate with approximate geometry-based 3D speed correction.</p></article>'''
         if not cme_cards:
             cme_cards = '<p class="empty">No Earth-directed CME candidate with a usable arrival window.</p>'
 
         threat_items = ''.join(f'<li>{esc(item)}</li>' for item in threats[:8]) or '<li>No immediate threat identified.</li>'
         source_count = len(self.agg.data_quality)
-        healthy_count = sum(q.status in ('Excellent','Good','Fair') for q in qualities)
+        healthy_count = sum(q.status in ('Excellent', 'Good', 'Fair', 'Degraded') for q in qualities)
         generated_iso = now.isoformat()
         if interactive_available:
             forecast_iframe = (
@@ -5120,9 +8559,22 @@ class SpaceWeatherVisualizer:
                 '(Plotly unavailable, no usable data, or --no-interactive was set).</p>'
             )
 
+        live_chart_block = '''
+<div class="plate-card" style="padding:1.2rem">
+  <div class="plate-heading">
+    <span>LIVE TELEMETRY &amp; ML NOWCAST</span>
+    <h3>24-Hour L1 Solar Wind, IMF Bz &amp; 1-3h Dst Nowcast Stream</h3>
+    <span id="sse-badge" class="status-label" style="margin-left:auto">STATIC SNAPSHOT</span>
+  </div>
+  <div style="position:relative;height:360px;width:100%;margin-top:.8rem">
+    <canvas id="live-telemetry-chart"></canvas>
+  </div>
+</div>'''
+
         css = r'''
-:root{--bg:#050b14;--surface:#0b1524;--raised:#111e30;--glass:rgba(17,30,48,.82);--text:#f4f8fc;--muted:#8fa4ba;--line:#22344a;--cyan:#22d3ee;--blue:#3b82f6;--violet:#8b5cf6;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;--shadow:0 20px 60px rgba(0,0,0,.28);--radius:18px}html[data-theme=light]{--cyan:#0e7490;--bg:#eef4f8;--surface:#fff;--raised:#f7fafc;--glass:rgba(255,255,255,.88);--text:#102033;--muted:#5d7084;--line:#ccd8e3;--shadow:0 16px 42px rgba(20,45,70,.12)}*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:6rem}body{margin:0;background:radial-gradient(circle at 10% 0,rgba(34,211,238,.1),transparent 28rem),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.55}a{color:var(--cyan)}button,a{touch-action:manipulation}.skip-link{position:fixed;left:1rem;top:-5rem;z-index:999;background:#fff;color:#000;padding:.7rem 1rem}.skip-link:focus{top:1rem}.site-header{position:relative;overflow:hidden;background:linear-gradient(135deg,#06101d,#0c2340 55%,#112b49);color:#fff;padding:1.4rem max(1rem,calc((100vw - 82rem)/2));border-bottom:1px solid #21436a}.site-header:after{content:"";position:absolute;inset:-50% -10% auto 55%;height:24rem;background:radial-gradient(circle,rgba(34,211,238,.2),transparent 65%);pointer-events:none}.brand-row{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:1.5rem}.brand h1{margin:0;font-size:clamp(1.6rem,4vw,2.65rem);letter-spacing:-.04em}.brand p{margin:.25rem 0 0;color:#b9cee2}.header-actions{display:flex;align-items:center;gap:.65rem}.theme-toggle,.refresh-button{border:1px solid #466887;background:rgba(255,255,255,.08);color:#fff;border-radius:999px;padding:.58rem .8rem;cursor:pointer}.risk-pill{padding:.7rem 1rem;border-radius:999px;background:rgba(255,255,255,.1);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.2);font-weight:850}.age-banner{position:relative;z-index:1;max-width:82rem;margin:.9rem auto 0;padding:.68rem .9rem;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.45);border-radius:12px}.age-banner.aging{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.5)}.age-banner.stale{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.55)}.nav-shell{position:sticky;top:0;z-index:100;background:rgba(5,11,20,.88);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}.nav-inner{max-width:82rem;margin:auto;display:flex;align-items:center;gap:.35rem;padding:.55rem 1rem;overflow-x:auto}.nav-inner a{color:#d9e7f4;text-decoration:none;padding:.55rem .75rem;border-radius:10px;white-space:nowrap;font-size:.84rem}.nav-inner a:hover,.nav-inner a:focus,.nav-inner a.active{background:rgba(34,211,238,.14);color:#fff;outline:none}.wrap{max-width:82rem;margin:auto;padding:1.5rem 1rem 5rem}.telemetry-wrap{overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--glass);box-shadow:var(--shadow);margin-bottom:1.35rem}.status-strip{display:grid;grid-template-columns:repeat(6,minmax(9rem,1fr));gap:0;margin:0}.status-item{padding:.85rem 1rem;border-right:1px solid var(--line)}.status-item:last-child{border-right:0}.status-item strong{display:block;font-size:1.2rem;color:var(--text)}.status-item span{font:700 .69rem ui-monospace,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}section{margin:2.6rem 0}.section-head{display:flex;align-items:end;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--line);padding-bottom:.7rem}.section-head h2{margin:0;font-size:1.5rem;letter-spacing:-.02em}.section-head p{margin:0;color:var(--muted);font-size:.86rem}.hero-grid{display:grid;grid-template-columns:18rem 1fr;gap:1rem;margin-top:1rem}.risk-gauge{display:grid;place-items:center;min-height:18rem;border:1px solid var(--line);border-radius:var(--radius);background:var(--glass);box-shadow:var(--shadow)}.gauge-ring{--score:0;width:12rem;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--cyan) calc(var(--score)*1%),rgba(143,164,186,.16) 0);position:relative}.gauge-ring:after{content:"";position:absolute;inset:14px;border-radius:50%;background:var(--surface)}.gauge-copy{position:relative;z-index:1;text-align:center}.gauge-copy b{font-size:2.7rem}.gauge-copy span{display:block;color:var(--muted);font-size:.78rem}.executive-grid,.metric-grid,.event-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}.executive-card,.metric-card,.event-card,.plate-card,.full-report,.table-wrap,.unavailable-card{background:var(--glass);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);backdrop-filter:blur(14px)}.executive-card,.metric-card,.event-card{padding:1rem}.executive-card h3,.metric-card h3,.event-card h3{margin:0 0 .55rem;font-size:.9rem;color:var(--muted)}.big{font-size:1.65rem;font-weight:850}.muted,.small{color:var(--muted)}.small{font-size:.8rem}.metric-grid{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:1rem}.metric-head{display:flex;justify-content:space-between;gap:.5rem}.status-label,.health{display:inline-block;border-radius:999px;padding:.22rem .55rem;font-size:.67rem;font-weight:850;background:rgba(59,130,246,.14);color:var(--cyan)}.metric-value{font-size:1.75rem;font-weight:850;margin:.45rem 0}dl{margin:.5rem 0}dl>div{display:flex;justify-content:space-between;gap:1rem;border-top:1px solid var(--line);padding:.38rem 0}dt{color:var(--muted)}dd{margin:0;text-align:right;font-weight:650}.notice{margin-top:1rem;padding:1rem;border:1px solid rgba(245,158,11,.45);background:rgba(245,158,11,.09);border-radius:14px}.threat-list{margin:.75rem 0 0;padding-left:1.2rem}.legend,.gallery-tools{display:flex;flex-wrap:wrap;gap:.55rem;margin:.9rem 0}.filter-button,.compare-button{border:1px solid var(--line);background:var(--raised);color:var(--text);padding:.48rem .72rem;border-radius:999px;cursor:pointer}.filter-button.active{background:var(--cyan);color:#031018;border-color:var(--cyan)}.plate-card{margin:1rem 0 1.5rem;overflow:hidden}.image-button{display:block;width:100%;padding:0;border:0;background:#03070d;cursor:zoom-in}.plate-card img{display:block;width:100%;height:auto}.plate-card figcaption{padding:1rem}.plate-heading{display:flex;align-items:center;gap:.65rem}.plate-heading span{font:700 .72rem ui-monospace,monospace;color:var(--cyan)}.plate-heading h3{margin:0}.obs-line{font-size:.84rem;color:var(--muted)}.image-controls{display:flex;flex-wrap:wrap;gap:.5rem;margin:.8rem 0}.image-action{border:1px solid var(--line);background:var(--raised);color:var(--text);padding:.45rem .65rem;border-radius:9px;text-decoration:none;font:600 .78rem inherit;cursor:pointer}.image-action:hover,.image-action:focus{border-color:var(--cyan);color:var(--cyan)}.meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.25rem 1rem}details{margin-top:.7rem}summary{cursor:pointer;font-weight:750;color:var(--cyan)}.unavailable-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.unavailable-card{display:flex;gap:1rem;padding:1rem}.unavailable-icon{display:grid;place-items:center;min-width:3rem;height:3rem;border-radius:50%;background:var(--raised);color:var(--muted);font-weight:800}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:52rem}th,td{text-align:left;padding:.72rem;border-bottom:1px solid var(--line);font-size:.82rem}thead{background:var(--raised)}.health-excellent,.health-good{background:rgba(34,197,94,.14);color:var(--green)}.health-fair{background:rgba(245,158,11,.14);color:var(--amber)}.health-critical,.health-unavailable{background:rgba(239,68,68,.14);color:var(--red)}.full-report{padding:1rem}.full-report pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 ui-monospace,monospace}.modal{position:fixed;inset:0;z-index:500;display:none;background:rgba(2,8,16,.94);padding:2rem}.modal.open{display:grid;place-items:center}.modal-panel{max-width:min(96vw,90rem);max-height:94vh;color:#fff}.modal img{display:block;max-width:100%;max-height:82vh;margin:auto}.modal-bar{display:flex;justify-content:space-between;gap:1rem}.modal-close{background:#fff;border:0;border-radius:9px;padding:.5rem .8rem}.empty{border:1px dashed var(--line);padding:1rem;border-radius:14px;color:var(--muted)}footer{margin-top:3rem;padding:1.2rem 0;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem}.plotly-frame{width:100%;height:560px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}.nominal{border-color:var(--green)!important}.minor{border-color:var(--blue)!important}.moderate{border-color:var(--amber)!important}.severe,.extreme{border-color:var(--red)!important}button,.image-action,.filter-button{min-height:44px;min-width:44px}.modal-panel{border-radius:var(--radius);box-shadow:var(--shadow)}@media(hover:hover){.metric-card:hover,.plate-card:hover{transform:translateY(-2px);transition:transform .15s ease}}@media(max-width:980px){.hero-grid{grid-template-columns:1fr}.status-strip{grid-template-columns:repeat(3,1fr)}.executive-grid,.metric-grid,.event-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:640px){.brand-row{align-items:flex-start;flex-direction:column}.header-actions{width:100%;flex-wrap:wrap}.status-strip,.executive-grid,.metric-grid,.event-grid,.unavailable-grid{grid-template-columns:1fr}.status-item{border-right:0;border-bottom:1px solid var(--line)}.wrap{padding:1rem .75rem 3rem}.meta-grid{grid-template-columns:1fr}.modal{padding:.5rem}.section-head{align-items:flex-start;flex-direction:column}}.recent-runs-grid{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:1rem}@media(max-width:640px){.recent-runs-grid{grid-template-columns:1fr}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}@media print{.nav-shell,.image-controls,.age-banner,.skip-link,.gallery-tools,.header-actions{display:none!important}.wrap{max-width:none}.plate-card{break-inside:avoid;box-shadow:none}}
-'''  
+:root{--bg:#050b14;--surface:#0b1524;--raised:#111e30;--glass:rgba(17,30,48,.82);--text:#f4f8fc;--muted:#8fa4ba;--line:#22344a;--cyan:#22d3ee;--blue:#3b82f6;--violet:#8b5cf6;--green:#22c55e;--amber:#f59e0b;--red:#ef4444;--shadow:0 20px 60px rgba(0,0,0,.28);--radius:18px}html[data-theme=light]{--cyan:#0e7490;--bg:#eef4f8;--surface:#fff;--raised:#f7fafc;--glass:rgba(255,255,255,.88);--text:#102033;--muted:#5d7084;--line:#ccd8e3;--shadow:0 16px 42px rgba(20,45,70,.12)}*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:6rem}body{margin:0;background:radial-gradient(circle at 10% 0,rgba(34,211,238,.1),transparent 28rem),var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.55}a{color:var(--cyan)}button,a{touch-action:manipulation}.skip-link{position:fixed;left:1rem;top:-5rem;z-index:999;background:#fff;color:#000;padding:.7rem 1rem}.skip-link:focus{top:1rem}.site-header{position:relative;overflow:hidden;background:linear-gradient(135deg,#06101d,#0c2340 55%,#112b49);color:#fff;padding:1.4rem max(1rem,calc((100vw - 82rem)/2));border-bottom:1px solid #21436a}.site-header:after{content:"";position:absolute;inset:-50% -10% auto 55%;height:24rem;background:radial-gradient(circle,rgba(34,211,238,.2),transparent 65%);pointer-events:none}.brand-row{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:1.5rem}.brand h1{margin:0;font-size:clamp(1.6rem,4vw,2.65rem);letter-spacing:-.04em}.brand p{margin:.25rem 0 0;color:#b9cee2}.header-actions{display:flex;align-items:center;gap:.65rem}.theme-toggle,.refresh-button{border:1px solid #466887;background:rgba(255,255,255,.08);color:#fff;border-radius:999px;padding:.58rem .8rem;cursor:pointer}.risk-pill{padding:.7rem 1rem;border-radius:999px;background:rgba(255,255,255,.1);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.2);font-weight:850}.age-banner{position:relative;z-index:1;max-width:82rem;margin:.9rem auto 0;padding:.68rem .9rem;background:rgba(34,197,94,.14);border:1px solid rgba(34,197,94,.45);border-radius:12px}.age-banner.aging{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.5)}.age-banner.stale{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.55)}.nav-shell{position:sticky;top:0;z-index:100;background:rgba(5,11,20,.88);backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}.nav-inner{max-width:82rem;margin:auto;display:flex;align-items:center;gap:.35rem;padding:.55rem 1rem;overflow-x:auto}.nav-inner a{color:#d9e7f4;text-decoration:none;padding:.55rem .75rem;border-radius:10px;white-space:nowrap;font-size:.84rem}.nav-inner a:hover,.nav-inner a:focus,.nav-inner a.active{background:rgba(34,211,238,.14);color:#fff;outline:none}.wrap{max-width:82rem;margin:auto;padding:1.5rem 1rem 5rem}.telemetry-wrap{overflow:hidden;border:1px solid var(--line);border-radius:14px;background:var(--glass);box-shadow:var(--shadow);margin-bottom:1.35rem}.status-strip{display:grid;grid-template-columns:repeat(6,minmax(9rem,1fr));gap:0;margin:0}.status-item{padding:.85rem 1rem;border-right:1px solid var(--line)}.status-item:last-child{border-right:0}.status-item strong{display:block;font-size:1.2rem;color:var(--text)}.status-item span{font:700 .69rem ui-monospace,monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}section{margin:2.6rem 0}.section-head{display:flex;align-items:end;justify-content:space-between;gap:1rem;border-bottom:1px solid var(--line);padding-bottom:.7rem}.section-head h2{margin:0;font-size:1.5rem;letter-spacing:-.02em}.section-head p{margin:0;color:var(--muted);font-size:.86rem}.hero-grid{display:grid;grid-template-columns:18rem 1fr;gap:1rem;margin-top:1rem}.risk-gauge{display:grid;place-items:center;min-height:18rem;border:1px solid var(--line);border-radius:var(--radius);background:var(--glass);box-shadow:var(--shadow)}.gauge-ring{--score:0;width:12rem;aspect-ratio:1;border-radius:50%;display:grid;place-items:center;background:conic-gradient(var(--cyan) calc(var(--score)*1%),rgba(143,164,186,.16) 0);position:relative}.gauge-ring:after{content:"";position:absolute;inset:14px;border-radius:50%;background:var(--surface)}.gauge-copy{position:relative;z-index:1;text-align:center}.gauge-copy b{font-size:2.7rem}.gauge-copy span{display:block;color:var(--muted);font-size:.78rem}.executive-grid,.metric-grid,.event-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1rem}.executive-card,.metric-card,.event-card,.plate-card,.full-report,.table-wrap,.unavailable-card{background:var(--glass);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);backdrop-filter:blur(14px)}.executive-card,.metric-card,.event-card{padding:1rem}.executive-card h3,.metric-card h3,.event-card h3{margin:0 0 .55rem;font-size:.9rem;color:var(--muted)}.big{font-size:1.65rem;font-weight:850}.muted,.small{color:var(--muted)}.small{font-size:.8rem}.metric-grid{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:1rem}.metric-head{display:flex;justify-content:space-between;gap:.5rem}.status-label,.health{display:inline-block;border-radius:999px;padding:.22rem .55rem;font-size:.67rem;font-weight:850;background:rgba(59,130,246,.14);color:var(--cyan)}.metric-value{font-size:1.75rem;font-weight:850;margin:.45rem 0}dl{margin:.5rem 0}dl>div{display:flex;justify-content:space-between;gap:1rem;border-top:1px solid var(--line);padding:.38rem 0}dt{color:var(--muted)}dd{margin:0;text-align:right;font-weight:650}.notice{margin-top:1rem;padding:1rem;border:1px solid rgba(245,158,11,.45);background:rgba(245,158,11,.09);border-radius:14px}.threat-list{margin:.75rem 0 0;padding-left:1.2rem}.legend,.gallery-tools{display:flex;flex-wrap:wrap;gap:.55rem;margin:.9rem 0}.filter-button,.compare-button{border:1px solid var(--line);background:var(--raised);color:var(--text);padding:.48rem .72rem;border-radius:999px;cursor:pointer}.filter-button.active{background:var(--cyan);color:#031018;border-color:var(--cyan)}.plate-card{margin:1rem 0 1.5rem;overflow:hidden}.image-button{display:block;width:100%;padding:0;border:0;background:#03070d;cursor:zoom-in}.plate-card img{display:block;width:100%;height:auto}.plate-card figcaption{padding:1rem}.plate-heading{display:flex;align-items:center;gap:.65rem}.plate-heading span{font:700 .72rem ui-monospace,monospace;color:var(--cyan)}.plate-heading h3{margin:0}.obs-line{font-size:.84rem;color:var(--muted)}.image-controls{display:flex;flex-wrap:wrap;gap:.5rem;margin:.8rem 0}.image-action{border:1px solid var(--line);background:var(--raised);color:var(--text);padding:.45rem .65rem;border-radius:9px;text-decoration:none;font:600 .78rem inherit;cursor:pointer}.image-action:hover,.image-action:focus{border-color:var(--cyan);color:var(--cyan)}.meta-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.25rem 1rem}details{margin-top:.7rem}summary{cursor:pointer;font-weight:750;color:var(--cyan)}.unavailable-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}.unavailable-card{display:flex;gap:1rem;padding:1rem}.unavailable-icon{display:grid;place-items:center;min-width:3rem;height:3rem;border-radius:50%;background:var(--raised);color:var(--muted);font-weight:800}.table-wrap{overflow-x:auto}table{width:100%;border-collapse:collapse;min-width:52rem}th,td{text-align:left;padding:.72rem;border-bottom:1px solid var(--line);font-size:.82rem}thead{background:var(--raised)}.health-excellent,.health-good{background:rgba(34,197,94,.14);color:var(--green)}.health-fair,.health-degraded{background:rgba(245,158,11,.14);color:var(--amber)}.health-critical,.health-unavailable{background:rgba(239,68,68,.14);color:var(--red)}.full-report{padding:1rem}.full-report pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 ui-monospace,monospace}.modal{position:fixed;inset:0;z-index:500;display:none;background:rgba(2,8,16,.94);padding:2rem}.modal.open{display:grid;place-items:center}.modal-panel{max-width:min(96vw,90rem);max-height:94vh;color:#fff}.modal img{display:block;max-width:100%;max-height:82vh;margin:auto}.modal-bar{display:flex;justify-content:space-between;gap:1rem}.modal-close{background:#fff;border:0;border-radius:9px;padding:.5rem .8rem}.empty{border:1px dashed var(--line);padding:1rem;border-radius:14px;color:var(--muted)}footer{margin-top:3rem;padding:1.2rem 0;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem}.plotly-frame{width:100%;height:560px;border:1px solid var(--line);border-radius:var(--radius);background:var(--surface)}.nominal{border-color:var(--green)!important}.minor{border-color:var(--blue)!important}.moderate{border-color:var(--amber)!important}.severe,.extreme{border-color:var(--red)!important}button,.image-action,.filter-button{min-height:44px;min-width:44px}.modal-panel{border-radius:var(--radius);box-shadow:var(--shadow)}@media(hover:hover){.metric-card:hover,.plate-card:hover{transform:translateY(-2px);transition:transform .15s ease}}@media(max-width:980px){.hero-grid{grid-template-columns:1fr}.status-strip{grid-template-columns:repeat(3,1fr)}.executive-grid,.metric-grid,.event-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:640px){.brand-row{align-items:flex-start;flex-direction:column}.header-actions{width:100%;flex-wrap:wrap}.status-strip,.executive-grid,.metric-grid,.event-grid,.unavailable-grid{grid-template-columns:1fr}.status-item{border-right:0;border-bottom:1px solid var(--line)}.wrap{padding:1rem .75rem 3rem}.meta-grid{grid-template-columns:1fr}.modal{padding:.5rem}.section-head{align-items:flex-start;flex-direction:column}}.recent-runs-grid{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:1rem}@media(max-width:640px){.recent-runs-grid{grid-template-columns:1fr}}@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}@media print{.nav-shell,.image-controls,.age-banner,.skip-link,.gallery-tools,.header-actions{display:none!important}.wrap{max-width:none}.plate-card{break-inside:avoid;box-shadow:none}}
+.download-report-button{border:1px solid #22d3ee;background:#0e7490;color:#fff;border-radius:999px;padding:.58rem .9rem;font-weight:750;cursor:pointer}.download-dialog{border:1px solid var(--line);border-radius:18px;background:var(--surface);color:var(--text);width:min(92vw,34rem);padding:0;box-shadow:var(--shadow)}.download-dialog::backdrop{background:rgba(0,0,0,.72)}.download-form{padding:1.25rem;display:grid;gap:.9rem}.download-form h2,.download-form p{margin:0}.download-form input[type=email]{width:100%;padding:.72rem;border:1px solid var(--line);border-radius:10px;background:var(--raised);color:var(--text)}.consent-row{display:flex;align-items:flex-start;gap:.55rem}.download-form-actions{display:flex;justify-content:flex-end;gap:.65rem}.download-status{min-height:1.5rem;color:var(--muted)}
+'''
         js = r'''
 const generatedAt=new Date(document.body.dataset.generated);const ageBanner=document.getElementById('report-age');function updateAge(){const m=Math.max(0,(Date.now()-generatedAt)/60000);let t,c='';if(m<30)t=`Current snapshot, generated ${Math.round(m)} minutes ago.`;else if(m<360){t=`Snapshot age ${(m/60).toFixed(1)} hours.`;c='aging'}else{t=`STALE SNAPSHOT: ${(m/60).toFixed(1)} hours old. Waiting for the next generation.`;c='stale'}ageBanner.textContent=t;ageBanner.className=`age-banner ${c}`}updateAge();setInterval(updateAge,60000);
 const root = document.documentElement;
@@ -5162,15 +8614,108 @@ function downloadHealthCSV(){
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
+const downloadDialog=document.getElementById('download-dialog');
+const downloadOpen=document.getElementById('download-report-open');
+const downloadCancel=document.getElementById('download-cancel');
+const downloadForm=document.getElementById('download-form');
+const downloadStatus=document.getElementById('download-status');
+const formEndpoint=document.body.dataset.downloadEndpoint||'';
+const reportFile=document.body.dataset.reportFile||'';
+if(downloadOpen&&reportFile){downloadOpen.addEventListener('click',()=>{downloadStatus.textContent='';downloadDialog.showModal();document.getElementById('download-email').focus()})}
+downloadCancel.addEventListener('click',()=>downloadDialog.close());
+downloadForm.addEventListener('submit',async event=>{
+ event.preventDefault();
+ if(!formEndpoint){downloadStatus.textContent='Download registration is not configured by the site owner.';return}
+ const button=document.getElementById('download-submit');button.disabled=true;downloadStatus.textContent='Recording your consent...';
+ try{const data=new FormData(downloadForm);data.set('report',reportFile);data.set('page',location.href);data.set('submitted_at',new Date().toISOString());
+ const response=await fetch(formEndpoint,{method:'POST',body:data,headers:{Accept:'application/json'}});if(!response.ok)throw new Error(`registration failed (${response.status})`);
+ downloadStatus.textContent='Thank you. Your download is starting.';const link=document.createElement('a');link.href=reportFile;link.download=reportFile.split('/').pop();document.body.appendChild(link);link.click();link.remove();downloadForm.reset();setTimeout(()=>downloadDialog.close(),1200)}
+ catch(error){downloadStatus.textContent='Could not record the email, so the download was not started. Please try again.';console.error(error)}finally{button.disabled=false}
+});
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('service-worker.js').catch(()=>{}));
-'''  
-        html = f'''<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+(function initLiveMissionControl() {
+  if (!location.protocol.startsWith('http')) return;
+  const badge = document.getElementById('sse-badge');
+  const stripItems = document.querySelectorAll('.status-strip .status-item strong');
+  const pageParams = new URLSearchParams(location.search);
+  const apiToken = pageParams.get('token') || sessionStorage.getItem('smc-api-token') || '';
+  if (pageParams.get('token')) sessionStorage.setItem('smc-api-token', apiToken);
+  const authHeaders = apiToken ? { 'Authorization': `Bearer ${apiToken}` } : {};
+  const script = document.createElement('script');
+  script.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js';
+  script.onload = () => loadTelemetryChart();
+  document.head.appendChild(script);
+  let liveChart = null;
+  async function loadTelemetryChart() {
+    try {
+      const res = await fetch('/api/telemetry?range=24h', { headers: authHeaders });
+      if (!res.ok) return;
+      const data = await res.json();
+      const ctx = document.getElementById('live-telemetry-chart');
+      if (!ctx || !window.Chart) return;
+      const labels = data.solar_wind.map(r => r.t.slice(11, 16));
+      liveChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Solar Wind Speed (km/s)', data: data.solar_wind.map(r => r.speed), borderColor: '#22d3ee', yAxisID: 'ySpeed', pointRadius: 0, borderWidth: 1.8 },
+            { label: 'IMF Bz (nT)', data: data.solar_wind.map(r => r.bz), borderColor: '#ef4444', yAxisID: 'yBz', pointRadius: 0, borderWidth: 1.5 }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            ySpeed: { type: 'linear', position: 'left', title: { display: true, text: 'Speed [km/s]' } },
+            yBz: { type: 'linear', position: 'right', title: { display: true, text: 'Bz [nT]' }, grid: { drawOnChartArea: false } }
+          }
+        }
+      });
+    } catch (err) { console.warn('Live telemetry API unavailable:', err); }
+  }
+  try {
+    const sseUrl = apiToken ? `/events?token=${encodeURIComponent(apiToken)}` : '/events';
+    const evtSource = new EventSource(sseUrl);
+    evtSource.addEventListener('telemetry_tick', (e) => {
+      const d = JSON.parse(e.data);
+      if (badge) {
+        badge.textContent = d.divergence_detected ? 'LIVE | L1 DIVERGENCE WARNING' : `LIVE SSE (${d.sw_source})`;
+        badge.style.background = d.divergence_detected ? 'rgba(239,68,68,.25)' : 'rgba(34,197,94,.22)';
+      }
+      if (stripItems.length >= 6) {
+        stripItems[0].textContent = `${d.risk_level} ${d.risk_score}/100`;
+        stripItems[1].textContent = Number(d.kp).toFixed(1);
+        stripItems[2].textContent = `${Math.round(d.solar_wind_speed)} km/s`;
+        stripItems[3].textContent = `${d.bz >= 0 ? '+' : ''}${Number(d.bz).toFixed(1)} nT`;
+        stripItems[4].textContent = d.xray_class;
+        stripItems[5].textContent = new Date(d.timestamp).toISOString().slice(11, 16) + ' UTC';
+      }
+      if (liveChart && d.timestamp) {
+        const timeLabel = d.timestamp.slice(11, 16);
+        if (liveChart.data.labels[liveChart.data.labels.length - 1] !== timeLabel) {
+          liveChart.data.labels.push(timeLabel);
+          liveChart.data.datasets[0].data.push(d.solar_wind_speed);
+          liveChart.data.datasets[1].data.push(d.bz);
+          if (liveChart.data.labels.length > 360) {
+            liveChart.data.labels.shift();
+            liveChart.data.datasets.forEach(ds => ds.data.shift());
+          }
+          liveChart.update('none');
+        }
+      }
+    });
+  } catch (err) { console.warn('SSE unavailable:', err); }
+})();
+'''
+        html_doc = f'''<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark light"><meta name="theme-color" content="#050b14"><link rel="manifest" href="manifest.webmanifest"><meta name="apple-mobile-web-app-capable" content="yes">
-<title>Solar Mission Control | {now:%Y-%m-%d %H:%M} UTC</title><style>{css}</style></head>
-<body data-generated="{generated_iso}"><a class="skip-link" href="#main">Skip to main content</a>
+<title>Solar Mission Control by {esc(AUTHOR_NAME)} | {now:%Y-%m-%d %H:%M} UTC</title><style>{css}</style></head>
+<body data-generated="{generated_iso}" data-download-endpoint="{esc(REPORT_DOWNLOAD_FORM_ENDPOINT)}" data-report-file="{esc(report_download_file)}"><a class="skip-link" href="#main">Skip to main content</a>
 <header class="site-header"><div class="brand-row"><div class="brand"><h1>Solar Mission Control</h1>
 <p>Operational space-weather snapshot | Run {esc(run_id)} | Version {VERSION}</p></div>
-<div class="header-actions"><button id="theme-toggle" class="theme-toggle" type="button">Light theme</button><button id="refresh-now" class="refresh-button" type="button">Check for update</button><div class="risk-pill {risk_class}">{esc(risk.get('level','UNKNOWN'))} &nbsp; {risk.get('overall_risk',0)}/100</div></div></div>
+<div class="header-actions">{download_button_html}<button id="theme-toggle" class="theme-toggle" type="button">Light theme</button><button id="refresh-now" class="refresh-button" type="button">Check for update</button><div class="risk-pill {risk_class}">{esc(risk.get('level','UNKNOWN'))} &nbsp; {risk.get('overall_risk',0)}/100</div></div></div>
 <div id="report-age" class="age-banner" role="status">Calculating report age...</div></header>
 <nav class="nav-shell" aria-label="Report sections"><div class="nav-inner">
 <a href="#overview">Overview</a><a href="#conditions">Current conditions</a><a href="#forecast">Forecast</a>
@@ -5193,15 +8738,15 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
 <article class="executive-card"><h3>Current state</h3><div class="big">{esc(risk.get('level','UNKNOWN'))}</div><p>Composite risk {risk.get('overall_risk',0)}/100</p><p class="muted">Dominant factor: {esc(dominant)}</p></article>
 <article class="executive-card"><h3>Next {self.hours_forward} hours</h3><div class="big">Kp {outlook.get('peak_kp',0):.1f}</div><p>M flare {m_prob:.0f}% | X flare {x_prob:.0f}%</p><p class="muted">{esc(cme_summary)}</p></article>
 <article class="executive-card"><h3>Main concern</h3><div class="big">{esc(dominant)}</div><p>{esc(concern)}</p></article>
-<article class="executive-card"><h3>Data status</h3><div class="big">{healthy_count}/{source_count}</div><p>feeds usable</p><p class="muted">Confidence {confidence_label} ({confidence_score:.0f}%)</p></article></div>
+<article class="executive-card"><h3>Data status</h3><div class="big">{healthy_count}/{source_count}</div><p>feeds usable</p><p class="muted">Confidence {confidence_label} ({confidence_score:.0f}%)</p></article></div></div>
 <div class="notice"><strong>Forecast confidence: {confidence_label}</strong><br>{esc('; '.join(confidence_reason))}</div>
 <ul class="threat-list">{threat_items}</ul></section>
 
 <section id="conditions"><div class="section-head"><h2>Current conditions</h2><p>Observed values with source and timestamp</p></div>
 <div class="metric-grid">{condition_cards}</div></section>
 
-<section id="forecast"><div class="section-head"><h2>Forecast and risk timeline</h2><p>Observed data and forecast products are visually separated</p></div>
-<div class="legend" aria-label="Timeline legend"><span>Observed, solid line</span><span class="forecast">Forecast, dashed line</span><span class="now">NOW marker</span></div>{forecast_iframe}
+<section id="forecast"><div class="section-head"><h2>Forecast, ML Nowcast &amp; Risk Timeline</h2><p>Observed data, 1-3h ML Dst/Kp nowcast, and forecast products</p></div>
+<div class="legend" aria-label="Timeline legend"><span>Observed, solid line</span><span class="forecast">Forecast, dashed line</span><span class="now">NOW marker</span></div>{live_chart_block}{forecast_iframe}
 {''.join(plate(item, i+1, 'forecast') for i,item in enumerate([x for x in self.figures if x.get('key') in ('risk_timeline','geomagnetic','auroral_boundary','risk_trend')]))}</section>
 
 <section id="solar-wind"><div class="section-head"><h2>Solar-wind conditions</h2><p>Latest L1 measurements and coupling context</p></div>
@@ -5212,7 +8757,7 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
 {''.join(plate(item, i+201, 'events') for i,item in enumerate([x for x in self.figures if x.get('key') in ('xray_flux','proton_flux','active_regions','cme_population','cme_arrival_windows','cme_speed_transit','f107_cycle','overview')]))}</section>
 
 <section id="imagery"><div class="section-head"><h2>Solar disc and corona</h2><p>Science plates with observation time, provenance, downloads, and full-screen viewing</p></div>
-<div class="gallery-tools" aria-label="Imagery filters"><button class="filter-button active" data-filter="all" type="button">All</button><button class="filter-button" data-filter="sdo" type="button">SDO</button><button class="filter-button" data-filter="lasco" type="button">LASCO</button><button class="filter-button" data-filter="ovation" type="button">Aurora</button><button class="filter-button" data-filter="synoptic" type="button">Synoptic</button><button class="filter-button" data-filter="psp" type="button">PSP</button><button class="filter-button" data-filter="proba2" type="button">LYRA</button></div>{figure_html}{image_html}<div class="unavailable-grid">{unavailable_html}</div></section>
+<div class="gallery-tools" aria-label="Imagery filters"><button class="filter-button active" data-filter="all" type="button">All</button><button class="filter-button" data-filter="sdo" type="button">SDO</button><button class="filter-button" data-filter="lasco" type="button">LASCO</button><button class="filter-button" data-filter="stereo" type="button">STEREO-A</button><button class="filter-button" data-filter="ovation" type="button">Aurora</button><button class="filter-button" data-filter="synoptic" type="button">Synoptic</button><button class="filter-button" data-filter="psp" type="button">PSP</button><button class="filter-button" data-filter="proba2" type="button">LYRA</button></div>{figure_html}{image_html}<div class="unavailable-grid">{unavailable_html}</div></section>
 
 <section id="health"><div class="section-head"><h2>Data freshness and availability</h2><p>Unavailable is never presented as zero</p></div>
 <div class="table-wrap"><table><thead><tr><th>Feed</th><th>Status</th><th>Latest sample</th><th>Age</th><th>Records</th><th>Completeness</th><th>Notes</th></tr></thead>
@@ -5220,8 +8765,25 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
 
 <section id="report"><div class="section-head"><h2>Full text report</h2><p>Detailed methodology, recommendations, sources, and disclaimer</p></div>
 <details class="full-report"><summary>Open complete text report</summary><pre>{esc(text_report)}</pre></details></section>
-<footer>Generated {now:%Y-%m-%d %H:%M:%S UTC} | Run {esc(run_id)} | Version {VERSION}. This is a static snapshot. Verify operational decisions against official advisories.</footer>
+<footer>
+<strong>Prepared by {esc(AUTHOR_NAME)}</strong> | <a href="mailto:{esc(AUTHOR_EMAIL)}">{esc(AUTHOR_EMAIL)}</a><br>
+{esc(COPYRIGHT_NOTICE)} {esc(CODE_RIGHTS_NOTICE)}<br>
+Generated {now:%Y-%m-%d %H:%M:%S UTC} | Run {esc(run_id)} | Version {VERSION}. Verify operational decisions against official advisories.
+</footer>
 </main>
+<dialog id="download-dialog" class="download-dialog" aria-labelledby="download-title">
+<form id="download-form" class="download-form">
+<h2 id="download-title">Download the full report</h2>
+<p>Enter your email address to access the current full report.</p>
+<label for="download-email">Email address</label>
+<input id="download-email" name="email" type="email" autocomplete="email" required maxlength="254" placeholder="name@example.com">
+<input name="subject" type="hidden" value="Solar Mission Control full report download">
+<input name="recipient_reference" type="hidden" value="{esc(AUTHOR_EMAIL)}">
+<label class="consent-row"><input name="consent" type="checkbox" value="yes" required><span>I consent to my email being recorded for this download. {esc(DOWNLOAD_PRIVACY_NOTICE)}</span></label>
+<input type="text" name="company" tabindex="-1" autocomplete="off" style="position:absolute;left:-10000px" aria-hidden="true">
+<div id="download-status" class="download-status" role="status" aria-live="polite"></div>
+<div class="download-form-actions"><button id="download-cancel" type="button" class="theme-toggle">Cancel</button><button id="download-submit" type="submit" class="download-report-button">Record email and download</button></div>
+</form></dialog>
 <div id="image-modal" class="modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="modal-title"><div class="modal-panel">
 <div class="modal-bar"><div><strong id="modal-title"></strong><div id="modal-time" class="small"></div></div><button id="modal-close" class="modal-close" type="button">Close</button></div>
 <img id="modal-image" alt="Expanded solar or analytical image"></div></div><script>{js}</script></body></html>'''
@@ -5231,19 +8793,26 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
         try:
             for destination in (path, index_path):
                 with open(destination, 'w', encoding='utf-8') as handle:
-                    handle.write(html)
+                    handle.write(html_doc)
             with open(os.path.join(self.output_dir, '.nojekyll'), 'w', encoding='utf-8'):
                 pass
-            # Modern web assets: dashboard data, bounded history, and PWA shell.
             dashboard = {
                 'version': VERSION, 'generated_at': generated_iso, 'run_id': run_id,
                 'risk': risk, 'conditions': conditions, 'forecast': outlook,
+                'l1_validation': getattr(self.agg, 'l1_validation', {}),
+                'nowcast': getattr(self.agg, 'nowcast_result', {}),
+                'shock_diagnostics':getattr(self.agg,'shock_diagnostics',{}),
+                'coupling_diagnostics':getattr(self.agg,'coupling_diagnostics',{}),
+                'input_sensitivity':getattr(self.agg,'input_sensitivity',{}),
+                'kp_three_way_verification':getattr(self.agg,'kp_verification_summary',{}),
+                'donki_status': getattr(self.agg, 'donki_status', 'AVAILABLE'),
                 'data_confidence': {'label': confidence_label, 'score': round(confidence_score, 1)},
             }
             data_dir = os.path.join(self.output_dir, 'data')
             os.makedirs(data_dir, exist_ok=True)
             with open(os.path.join(data_dir, 'dashboard.json'), 'w', encoding='utf-8') as handle:
-                json.dump(dashboard, handle, indent=2, default=str)
+                json.dump(json_safe_value(dashboard), handle, indent=2,
+                          ensure_ascii=False, allow_nan=False)
             history_path = os.path.join(data_dir, 'history.json')
             try:
                 with open(history_path, 'r', encoding='utf-8') as handle:
@@ -5252,15 +8821,20 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
                     history = []
             except (OSError, ValueError):
                 history = []
-            history.append({'timestamp': generated_iso, 'risk': risk.get('overall_risk'),
-                            'kp': conditions['geomagnetic']['kp'], 'dst': conditions['geomagnetic']['dst'],
-                            'wind_speed': conditions['solar_wind']['speed'], 'bz': conditions['solar_wind']['bz']})
-            history = history[-336:]  # approximately 14 days at hourly generation
+            history.append({
+                'timestamp': generated_iso, 'risk': risk.get('overall_risk'),
+                'kp': conditions['geomagnetic']['kp'], 'dst': conditions['geomagnetic']['dst'],
+                'wind_speed': conditions['solar_wind']['speed'], 'bz': conditions['solar_wind']['bz'],
+            })
+            history = history[-336:]
             with open(history_path, 'w', encoding='utf-8') as handle:
-                json.dump(history, handle, indent=2, default=str)
-            manifest = {'name':'Solar Mission Control','short_name':'SMC','start_url':'./index.html',
-                        'display':'standalone','background_color':'#050b14','theme_color':'#050b14',
-                        'description':'Space-weather monitoring dashboard'}
+                json.dump(json_safe_value(history), handle, indent=2,
+                          ensure_ascii=False, allow_nan=False)
+            manifest = {
+                'name': 'Solar Mission Control', 'short_name': 'SMC', 'start_url': './index.html',
+                'display': 'standalone', 'background_color': '#050b14', 'theme_color': '#050b14',
+                'description': 'Space-weather monitoring dashboard',
+            }
             with open(os.path.join(self.output_dir, 'manifest.webmanifest'), 'w', encoding='utf-8') as handle:
                 json.dump(manifest, handle, indent=2)
             service_worker = f"""const C='smc-v{VERSION}';const A=['./','./index.html','./manifest.webmanifest','./data/dashboard.json'];self.addEventListener('install',e=>e.waitUntil(caches.open(C).then(c=>c.addAll(A))));self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C).map(x=>caches.delete(x))))));self.addEventListener('fetch',e=>e.respondWith(fetch(e.request).then(r=>{{const q=r.clone();caches.open(C).then(c=>c.put(e.request,q));return r}}).catch(()=>caches.match(e.request))));"""
@@ -5272,7 +8846,6 @@ if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.ser
         except Exception as exc:
             print(f"  Could not write HTML dashboard: {exc}")
             return None
-
 # ============================================================================
 # REPORT GENERATOR
 # ============================================================================
@@ -5281,11 +8854,42 @@ class SpaceWeatherReportGenerator:
     """Generates formatted space weather reports"""
 
     def __init__(self, aggregator: SpaceWeatherAggregator,
-                 visualizer: Optional['SpaceWeatherVisualizer'] = None):
+                 visualizer: Optional['SpaceWeatherVisualizer'] = None,
+                 risk_model: Optional[Dict[str, Any]] = None,
+                 snapshot_provider: Optional[Callable[[], Optional[ReportSnapshot]]] = None):
         self.aggregator = aggregator
-        self.risk_engine = RiskAssessmentEngine()
+        self.risk_engine = RiskAssessmentEngine(risk_model)
+        # Keep timelines, overview labels, summaries, and exported reports on
+        # the same validated risk model, including custom --risk-config values.
+        self.aggregator.risk_engine = self.risk_engine
         self.visualizer = visualizer
         self.run_id = str(uuid.uuid4())[:8]
+        self._snapshot_provider = snapshot_provider or (lambda: None)
+
+    @property
+    def snapshot(self) -> Optional[ReportSnapshot]:
+        return self._snapshot_provider()
+
+    def clear_snapshot(self) -> None:
+        return None
+
+    def build_snapshot(self, run_id: Optional[str] = None) -> ReportSnapshot:
+        """Calculate all shared report inputs once and freeze a deep-copied snapshot."""
+        full_run_id = str(run_id or self.run_id)
+        conditions, risk = self._risk_inputs()
+        snapshot = ReportSnapshot(
+            schema_version='5.0', software_version=VERSION,
+            run_id=full_run_id, run_id_short=full_run_id[:8],
+            generated_at=datetime.now(timezone.utc),
+            conditions=copy.deepcopy(conditions), risk=copy.deepcopy(risk),
+            outlook=copy.deepcopy(self.aggregator.get_forecast_outlook()),
+            events=copy.deepcopy(self.aggregator.get_recent_events(hours=72)),
+            threats=copy.deepcopy(self.aggregator.get_threats()),
+            source_health=copy.deepcopy(self.aggregator.data_quality),
+            risk_model=copy.deepcopy(self.risk_engine.model),
+        )
+        self.run_id = snapshot.run_id_short
+        return snapshot
 
     def _risk_inputs(self) -> Tuple[Dict, Dict]:
         """Derive a blended risk without treating missing data as quiet data.
@@ -5293,6 +8897,9 @@ class SpaceWeatherReportGenerator:
         The published score combines current observations with a forward-looking
         component. Both inputs remain available in the returned risk mapping.
         """
+        if self.snapshot is not None:
+            return (copy.deepcopy(self.snapshot.conditions),
+                    copy.deepcopy(self.snapshot.risk))
         conditions = self.aggregator.get_current_conditions()
         critical_data_available = any((
             self.aggregator.xray_data,
@@ -5387,18 +8994,22 @@ class SpaceWeatherReportGenerator:
         conditions, risk = self._risk_inputs()
         risk_level = risk['overall_risk']
         primary_concern = risk['concerns'][0] if risk['concerns'] else "No significant concerns"
+        l1_status = (getattr(self.aggregator, 'l1_validation', {}) or {}).get('fleet_status', 'NOMINAL')
 
         return f"""
 QUICK SPACE WEATHER CHECK
+  Prepared by: {AUTHOR_NAME}
+  Contact:     {AUTHOR_EMAIL}
   Run ID:      {self.run_id}
+  {COPYRIGHT_NOTICE}
 =============================================
   Risk Level: {risk['level']} ({risk_level}/100)
   X-Ray:      {conditions['xray']['classification']}
   Kp Index:   {conditions['geomagnetic']['kp']}
-  Solar Wind: {conditions['solar_wind']['speed']:.0f} km/s ({conditions['solar_wind']['source']})
+  Solar Wind: {conditions['solar_wind']['speed']:.0f} km/s ({conditions['solar_wind']['source']} | {l1_status})
   Active Alerts:  {len(self.aggregator.alerts)}
   Recent Messages:{len(self.aggregator.recent_alert_messages)}
-  Outlook:        {self.aggregator.get_forecast_outlook()['level']}
+  Outlook:        {(self.snapshot.outlook if self.snapshot else self.aggregator.get_forecast_outlook())['level']}
   Active ARs: {len(self.aggregator.solar_regions)}
   F10.7:      {self.aggregator.f107_flux.get('flux', 'N/A')} sfu
   Concern:    {primary_concern}
@@ -5407,15 +9018,18 @@ QUICK SPACE WEATHER CHECK
 
     def generate_full_report(self) -> str:
         """Generate comprehensive space weather report"""
-        now = datetime.now(timezone.utc)
+        now = self.snapshot.generated_at if self.snapshot else datetime.now(timezone.utc)
         conditions, risk = self._risk_inputs()
-        recent_events = self.aggregator.get_recent_events(hours=72)
-        threats = self.aggregator.get_threats()
+        recent_events = (copy.deepcopy(self.snapshot.events) if self.snapshot
+                         else self.aggregator.get_recent_events(hours=72))
+        threats = (copy.deepcopy(self.snapshot.threats) if self.snapshot
+                   else self.aggregator.get_threats())
 
         report_parts = [
             self._generate_header(now),
             self._generate_executive_summary(risk, threats),
             self._generate_current_conditions(conditions),
+            self._generate_l1_validation_and_nowcast_section(),
             self._generate_recent_events(recent_events),
             self._generate_cme_arrival_section(),
             self._generate_historical_analogs(),
@@ -5439,8 +9053,13 @@ QUICK SPACE WEATHER CHECK
 ================================================================================
 
   Report Generated: {now.strftime('%Y-%m-%d %H:%M:%S')} UTC
+  Prepared by:      {AUTHOR_NAME}
+  Contact:          {AUTHOR_EMAIL}
   Run ID:           {self.run_id}
   System Version:   {VERSION}
+  Copyright:        {COPYRIGHT_NOTICE}
+
+  {CODE_RIGHTS_NOTICE}
 
 --------------------------------------------------------------------------------
 """
@@ -5460,7 +9079,7 @@ QUICK SPACE WEATHER CHECK
         level_desc = descriptions.get(risk['level'], "Unknown conditions")
         has_forward_concern = bool(risk.get('has_forward_concerns', False))
         if risk['level'] == 'NOMINAL' and has_forward_concern:
-            level_desc = 'Currently quiet; forecast activity remains under watch' 
+            level_desc = 'Currently quiet; forecast activity remains under watch'
 
         def make_bar(value: int, max_val: int = 100) -> str:
             filled = int((value / max_val) * 20)
@@ -5525,7 +9144,7 @@ QUICK SPACE WEATHER CHECK
         solar_wind = conditions['solar_wind']
         geomag = conditions['geomagnetic']
 
-        r_scale_num, r_scale_str = xray['r_scale']
+        _, r_scale_str = xray['r_scale']
 
         s_scale_names = {0: "S0 (None)", 1: "S1 (Minor)", 2: "S2 (Moderate)",
                          3: "S3 (Strong)", 4: "S4 (Severe)", 5: "S5 (Extreme)"}
@@ -5539,12 +9158,18 @@ QUICK SPACE WEATHER CHECK
         elif solar_wind['speed'] >= 500:
             sw_status = "Enhanced"
 
-        if solar_wind['bz'] <= -10:
-            bz_indicator = "strongly southward"
-        elif solar_wind['bz'] < 0:
-            bz_indicator = "southward"
+        if not is_finite_number(solar_wind['bz']):
+            bz_indicator = "unavailable"
+            bz_text = "N/A (unavailable)"
         else:
-            bz_indicator = "northward"
+            if solar_wind['bz'] <= -10:
+                bz_indicator = "strongly southward"
+            elif solar_wind['bz'] < 0:
+                bz_indicator = "southward"
+            else:
+                bz_indicator = "northward"
+            bz_text = f"{solar_wind['bz']:+.1f} nT ({bz_indicator})"
+        bt_text = f"{solar_wind['bt']:.1f} nT" if is_finite_number(solar_wind['bt']) else "N/A"
 
         dyn_pressure = 1.67e-6 * solar_wind['density'] * (solar_wind['speed'] ** 2)
 
@@ -5605,8 +9230,8 @@ QUICK SPACE WEATHER CHECK
       Speed:             {solar_wind['speed']:.0f} km/s
       Density:           {solar_wind['density']:.1f} p/cm3
       Temperature:       {solar_wind['temperature']:.2e} K
-      IMF Bz:            {solar_wind['bz']:+.1f} nT ({bz_indicator})
-      IMF Bt:            {solar_wind['bt']:.1f} nT
+      IMF Bz:            {bz_text}
+      IMF Bt:            {bt_text}
       Dynamic Pressure:  {dyn_pressure:.2f} nPa
       Newell Coupling:   {coupling_str}
       Geoeffectiveness:  {solar_wind['geoeffectiveness']}
@@ -5621,6 +9246,73 @@ QUICK SPACE WEATHER CHECK
       24h Max Kp:        {geomag['max_24h_kp']:.1f}
       24h Min Kp:        {geomag['min_24h_kp']:.1f}
       Aurora Visibility: {aurora}
+"""
+
+    def _generate_l1_validation_and_nowcast_section(self) -> str:
+        """Render operational L1/nowcast plus clearly labeled experimental diagnostics."""
+        val=getattr(self.aggregator,'l1_validation',{}) or {}
+        spikes=getattr(self.aggregator,'spike_filter_stats',{}) or {}
+        nowcast=getattr(self.aggregator,'nowcast_result',{}) or {}
+        stereo=getattr(self.aggregator,'stereo_a_beacon',{}) or {}
+        deproj=getattr(self.aggregator,'stereoscopic_cmes',[]) or []
+        shock=getattr(self.aggregator,'shock_diagnostics',{}) or {}
+        coupling=getattr(self.aggregator,'coupling_diagnostics',{}) or {}
+        sensitivity=getattr(self.aggregator,'input_sensitivity',{}) or {}
+        def fmt(value,spec):
+            value=as_float(value,float('nan'))
+            return format(value,spec) if math.isfinite(value) else 'N/A'
+        items=list((val.get('spacecraft') or {}).items()); sc=[]
+        for src,m in items[:6]:
+            flag='ACTIVE' if m.get('active') else 'BACKUP'
+            sc.append(f"      {src:<10} [{flag:<6}] | v={fmt(m.get('median_speed'),'>6.0f')} km/s | Bz={fmt(m.get('median_bz'),'>+6.1f')} nT | n={fmt(m.get('median_density'),'>5.1f')} cm^-3 | spikes={m.get('spikes_repaired',0):>2d} | Q={fmt(m.get('quality_score'),'>5.1f')}%")
+        if len(items)>6: sc.append(f"      ... showing 6 of {len(items)} spacecraft sources")
+        sc_block='\n'.join(sc) if sc else '      No L1 fleet comparison records'
+        nc=[]
+        for key in ('1h','2h','3h'):
+            pred=(nowcast.get('predictions') or {}).get(key)
+            if not pred: continue
+            conformal=''
+            if pred.get('conformal_half_width_nt') is not None:
+                conformal=(f"; experimental conformal 90%: [{pred['dst_conformal_lower_nt']:>+6.1f}, {pred['dst_conformal_upper_nt']:>+6.1f}] nT")
+            nc.append(f"      +{pred['horizon_hours']}h ({pred['target_time_utc'][:16]} UTC): Dst = {pred['dst_nt']:>+6.1f} nT (screening range: [{pred['dst_screening_lower_nt']:>+6.1f}, {pred['dst_screening_upper_nt']:>+6.1f}] nT{conformal}) | Kp = {pred['kp']:.1f} (G{pred['g_scale']})")
+        nc_block='\n'.join(nc) if nc else '      Nowcast unavailable'
+        ssc=nowcast.get('ssc_detection') or {}
+        shock_block=(f"      Status: {'candidate discontinuity' if shock.get('shock_detected_screening') else 'no screened discontinuity'} | density ratio={shock.get('density_compression_ratio','N/A')} | Bt ratio={shock.get('magnetic_compression_ratio','N/A')} | theta_Bn={shock.get('theta_bn_deg') if shock.get('theta_bn_deg') is not None else 'N/A'} deg\n      Evidence end: {shock.get('detection_window_end_utc','N/A')} | age={shock.get('newest_sample_age_seconds','N/A')} s | normal={shock.get('normal_status','unavailable')} | experimental; no full RH closure" if shock.get('available') else f"      Unavailable: {shock.get('reason','no data')}")
+        coupling_block=(f"      Boyle={coupling.get('polar_cap_potential_kv','N/A')} kV | Akasofu epsilon={coupling.get('akasofu_epsilon_gw','N/A')} GW | FAC index={coupling.get('fac_activity_index','N/A')}/10 | Kp context={coupling.get('activity_context','unavailable')}\n      Applicability: {coupling.get('applicability','N/A')}; saturation not modeled; experimental" if coupling.get('available') else '      Unavailable')
+        sens=[f"      {h}: Dst std={v.get('dst_input_sensitivity_std_nt','N/A')} nT, range={v.get('dst_input_sensitivity_range_nt','N/A')} nT; Kp std={v.get('kp_input_sensitivity_std','N/A')}" for h,v in (sensitivity.get('horizons') or {}).items()]
+        sensitivity_block='\n'.join(sens) if sens else '      Unavailable'
+        st=[]
+        for item in deproj[:6]:
+            if item.get('is_earth_directed'):
+                st.append(f"      Launch {item['start_time_utc'][:16]} UTC | POS={item['v_pos_kms']:.0f} km/s -> 3D={item['v_3d_deprojected_kms']:.0f} km/s | 3D ETA: {(item.get('eta_3d_utc') or 'N/A')[:16]} UTC")
+        st_block='\n'.join(st) if st else '      No Earth-directed CMEs requiring stereoscopic de-projection'
+        return f"""
+             L1 FLEET, NOWCAST, AND EXPERIMENTAL DIAGNOSTICS
+--------------------------------------------------------------------------------
+    L1 FLEET SENSOR DIAGNOSTICS ({val.get('window_minutes',30)}-min window):
+      Fleet Status:        {val.get('fleet_status','UNKNOWN')}
+      Active Spacecraft:   {val.get('active_source','Unknown')}
+      Recommended Source:  {val.get('recommended_source','Unknown')}
+      Hampel Despiking:    {spikes.get('total_repaired',0)} spike(s) repaired
+{sc_block}
+
+    GEOMAGNETIC 1-3H NOWCAST ({nowcast.get('model_type','Unavailable')}):
+      SSC / Magnetopause:  {ssc.get('summary','N/A')}
+{nc_block}
+
+    EXPERIMENTAL L1 SHOCK CHARACTERIZATION:
+{shock_block}
+
+    EXPERIMENTAL MAGNETOSPHERE COUPLING:
+{coupling_block}
+
+    EXPERIMENTAL INPUT-SENSITIVITY ANALYSIS:
+{sensitivity_block}
+
+    STEREO-A BEACON & 3D CME DE-PROJECTION:
+      STEREO-A Separation: {stereo.get('hee_longitude_deg','N/A')} deg HEE
+      STEREO-A Telemetry:  {stereo.get('telemetry_status','UNCONFIGURED')}
+{st_block}
 """
 
     def _generate_recent_events(self, events: Dict) -> str:
@@ -5719,19 +9411,35 @@ QUICK SPACE WEATHER CHECK
 
     EARTH-DIRECTED CMEs:
 {earth_cmes_str}
+    EXTENDED CCMC DONKI CATALOGUE (72 HOURS):
+      Interplanetary Shocks (IPS):      {len(events.get('interplanetary_shocks') or [])}
+      Solar Energetic Particles (SEP):  {len(events.get('sep_events') or [])}
+      High-Speed Streams (HSS):         {len(events.get('high_speed_streams') or [])}
+      WSA-Enlil Simulations:            {len(events.get('wsa_enlil_simulations') or [])}
+      Magnetopause Crossings (MPC):     {len(events.get('magnetopause_crossings') or [])}
+      Radiation Belt Enhancements (RBE):{len(events.get('radiation_belt_enhancements') or [])}
+      Standalone CME Analyses:          {len(events.get('cme_analyses') or [])}
+      Operational Notifications:        {len(events.get('donki_notifications') or [])}
 """
 
     def _generate_cme_arrival_section(self) -> str:
-        rows=[]
+        rows = []
         for cme in self.aggregator.cmes:
-            window=self.aggregator.estimate_cme_arrival_window(cme)
+            window = self.aggregator.estimate_cme_arrival_window(cme)
             if not window:
                 continue
+            dist = window.get('speed_uncertainty_distribution') or {}
+            p5 = parse_swpc_time(dist.get('eta_5th_percentile')) if isinstance(dist, dict) else None
+            p95 = parse_swpc_time(dist.get('eta_95th_percentile')) if isinstance(dist, dict) else None
+            dist_text = (
+                f" | 5th-95th: {p5:%m-%d %H:%M} to {p95:%m-%d %H:%M}"
+                if p5 and p95 else ""
+            )
             rows.append(
                 f"      Launch {cme.start_time:%Y-%m-%d %H:%M} UTC | {cme.speed:.0f} km/s | "
                 f"ETA {window['eta']:%Y-%m-%d %H:%M} UTC | "
-                f"window {window['lower']:%m-%d %H:%M} to {window['upper']:%m-%d %H:%M} | "
-                f"{window['method']}")
+                f"window {window['lower']:%m-%d %H:%M} to {window['upper']:%m-%d %H:%M}"
+                f"{dist_text} | {window['method']}")
         if not rows:
             return ""
         return """
@@ -5744,12 +9452,12 @@ QUICK SPACE WEATHER CHECK
 """
 
     def _generate_historical_analogs(self) -> str:
-        analogs=self.aggregator.get_historical_analogs()
+        analogs = self.aggregator.get_historical_analogs()
         if not analogs:
             return ""
-        lines=["      HISTORICAL ANALOGS - PATTERN SIMILARITY ONLY:"]
+        lines = ["      HISTORICAL ANALOGS - PATTERN SIMILARITY ONLY:"]
         for item in analogs:
-            features=", ".join(item['compared_features'])
+            features = ", ".join(item['compared_features'])
             lines.append(
                 f"      * {item['name']} ({item['date']}) - {item['similarity']:.1f}% "
                 f"feature-pattern similarity using {features}; source: {item['source']}")
@@ -5768,20 +9476,24 @@ QUICK SPACE WEATHER CHECK
         return status, f"{age_hours:.1f} h old"
 
     def _generate_solar_activity_context(self) -> str:
-        f107=self.aggregator.f107_flux or {}; flux=f107.get('flux'); tag=f107.get('time_tag','')
-        f107_time=parse_swpc_time(tag+'-01') if re.fullmatch(r'\d{4}-\d{2}',str(tag)) else parse_swpc_time(tag)
-        f107_status,f107_age=self._age_status(f107_time,24*45,24*120)
-        region_date=self.aggregator.solar_regions[0].get('observed_date') if self.aggregator.solar_regions else ''
+        f107 = self.aggregator.f107_flux or {}
+        flux = f107.get('flux')
+        tag = f107.get('time_tag', '')
+        region_date = self.aggregator.solar_regions[0].get('observed_date') if self.aggregator.solar_regions else ''
         region_text = str(region_date).strip() if region_date else ''
         region_time = (parse_swpc_time(region_text + 'T00:00:00')
                        if re.fullmatch(r'\d{4}-\d{2}-\d{2}', region_text)
                        else parse_swpc_time(region_text))
-        region_status,region_age=self._age_status(region_time,48,120)
-        activity='Unknown' if flux is None else ('Very high' if flux>=200 else 'High' if flux>=150 else 'Moderate' if flux>=100 else 'Low')
-        flux_text='Unavailable' if flux is None else f"{flux:.1f} sfu ({tag})"
-        lines=[f"      AR {r['region']:>5} {r['location']:<7} area={r['area']:.0f} mag={r['mag_class']:<5} complexity={r.get('complexity','UNKNOWN'):<22} C/M/X={r['c_probability']:.0f}/{r['m_probability']:.0f}/{r['x_probability']:.0f}%" for r in self.aggregator.solar_regions[:10]]
-        regions='\n'.join(lines) if lines else '      Active-region data unavailable'
-        max_kp=max((max(0.0,min(9.0,as_float(r.get('kp')))) for r in self.aggregator.kp_forecast[:12]),default=0.0)
+        region_status, region_age = self._age_status(region_time, 48, 120)
+        activity = 'Unknown' if flux is None else ('Very high' if flux >= 200 else 'High' if flux >= 150 else 'Moderate' if flux >= 100 else 'Low')
+        flux_text = 'Unavailable' if flux is None else f"{flux:.1f} sfu ({tag})"
+        lines = [
+            f"      AR {r['region']:>5} {r['location']:<7} area={r['area']:.0f} mag={r['mag_class']:<5} "
+            f"complexity={r.get('complexity','UNKNOWN'):<22} C/M/X={r['c_probability']:.0f}/{r['m_probability']:.0f}/{r['x_probability']:.0f}%"
+            for r in self.aggregator.solar_regions[:10]
+        ]
+        regions = '\n'.join(lines) if lines else '      Active-region data unavailable'
+        max_kp = max((max(0.0, min(9.0, as_float(r.get('kp')))) for r in self.aggregator.kp_forecast[:12]), default=0.0)
         return f"""
                      SOLAR ACTIVITY & AURORAL CONTEXT
 --------------------------------------------------------------------------------
@@ -5832,15 +9544,23 @@ PROBA2/LYRA IRRADIANCE CONTEXT
 """
 
     def _generate_psp_context_section(self) -> str:
-        contexts=getattr(self.aggregator,'psp_contexts',{}) or {}; requested=getattr(self.aggregator,'psp_requested_keys',[]) or []
-        if not contexts and not requested: return ''
-        lines=['','PARKER SOLAR PROBE SCIENCE CONTEXT','-'*34]
+        contexts = getattr(self.aggregator, 'psp_contexts', {}) or {}
+        requested = getattr(self.aggregator, 'psp_requested_keys', []) or []
+        if not contexts and not requested:
+            return ''
+        lines = ['', 'PARKER SOLAR PROBE SCIENCE CONTEXT', '-' * 34]
         for key in requested:
-            context=contexts.get(key); title=PSP_PRODUCTS.get(key,{}).get('title',key)
-            if not context: lines.append(f'  {title}: UNAVAILABLE'); continue
-            if key=='wispr': lines.append(f"  WISPR: {len(context.get('files',[]))} FITS files, {len(context.get('previews',[]))} previews"); continue
+            context = contexts.get(key)
+            title = PSP_PRODUCTS.get(key, {}).get('title', key)
+            if not context:
+                lines.append(f'  {title}: UNAVAILABLE')
+                continue
+            if key == 'wispr':
+                lines.append(f"  WISPR: {len(context.get('files', []))} FITS files, {len(context.get('previews', []))} previews")
+                continue
             series = context.get('series', {})
-            stats = context.get('_plot_stats', {})
+            stats = (self.visualizer.psp_plot_stats.get(key, {})
+                     if self.visualizer else {})
             lines.append(
                 f"  {title}: {len(series)} raw series "
                 f"(datatype={context.get('datatype')}, level={context.get('level')})")
@@ -5853,8 +9573,9 @@ PROBA2/LYRA IRRADIANCE CONTEXT
             for name in list(series)[:8]:
                 lines.append(f'      - {name}')
             if len(series) > 8:
-                lines.append(f'      ... {len(series)-8} more')
-        lines.append('  Usage: delayed heliophysics context only; not measured at L1 and excluded from current-condition and risk calculations.'); lines.append('')
+                lines.append(f'      ... {len(series) - 8} more')
+        lines.append('  Usage: delayed heliophysics context only; not measured at L1 and excluded from current-condition and risk calculations.')
+        lines.append('')
         return '\n'.join(lines)
 
     def _generate_alerts_section(self) -> str:
@@ -5984,11 +9705,13 @@ PROBA2/LYRA IRRADIANCE CONTEXT
         plate = 0
         for item in self.visualizer.figures:
             plate += 1
-            lines += f"      Plate {plate:>2}  {item['title']}\n"
+            number = item.get('plate_number', plate)
+            lines += f"      Plate {number:>2}  {item['title']}\n"
             lines += f"                {item['path']}\n"
         for item in self.visualizer.images:
             plate += 1
-            lines += f"      Plate {plate:>2}  {item['title']}\n"
+            number = item.get('plate_number', plate)
+            lines += f"      Plate {number:>2}  {item['title']}\n"
             lines += f"                {item['path']}\n"
 
         if not lines:
@@ -6010,7 +9733,6 @@ PROBA2/LYRA IRRADIANCE CONTEXT
 
     def _generate_forecast_section(self, risk: Dict, conditions: Dict) -> str:
         """Generate forecast and recommendations section"""
-
         kp_forecast_str = ""
         if self.aggregator.kp_forecast:
             for forecast in self.aggregator.kp_forecast[:12]:
@@ -6142,8 +9864,11 @@ PROBA2/LYRA IRRADIANCE CONTEXT
      - NOAA F10.7 solar-cycle and numbered-region JSON products
      - NASA DONKI (Space Weather Database)
      - GOES Satellite (X-ray and particle data)
-     - RTSW L1 fleet (SOLAR-1 / IMAP / DSCOVR / ACE, active source flagged)
+     - RTSW L1 fleet (SOLAR-1 / IMAP / DSCOVR / ACE, cross-validated)
+     - STEREO-A Beacon (PLASTIC, IMPACT, SECCHI COR2/EUVI)
      - SDO (AIA, HMI) and SOHO/LASCO imagery
+     - Local SQLite telemetry, nowcast, and external-forecast archives
+     - ForecastVerifier, input sensitivity, ShockAnalyzer, and MagnetosphereCoupling diagnostics
 
   DISCLAIMER:
      This report is automatically generated from publicly available data.
@@ -6161,13 +9886,2142 @@ Solar Mission Control v{VERSION}                                  - End of Repor
 
 
 # ============================================================================
-# STANDALONE V3 OUTPUT, STORAGE, INTERACTIVE, AND ALERT HELPERS
+# V5.1 ALERT EVENT HISTORY, RETRIES, AND DEAD-LETTER QUEUE
 # ============================================================================
+
+def initialize_alert_event_database(db_path: str) -> None:
+    os.makedirs(os.path.dirname(os.path.abspath(db_path)), exist_ok=True)
+    with sqlite3.connect(db_path, timeout=10) as connection:
+        connection.execute('PRAGMA journal_mode=WAL')
+        connection.execute('PRAGMA busy_timeout=10000')
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS alert_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                fingerprint TEXT NOT NULL,
+                channel TEXT NOT NULL,
+                status TEXT NOT NULL,
+                status_code INTEGER,
+                error TEXT,
+                payload_json TEXT NOT NULL,
+                attempt INTEGER NOT NULL DEFAULT 1,
+                created_at TEXT NOT NULL
+            )
+        """)
+        connection.execute("""
+            CREATE TABLE IF NOT EXISTS dead_letter_alerts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                fingerprint TEXT NOT NULL,
+                channel TEXT NOT NULL,
+                target_url TEXT NOT NULL,
+                payload_json TEXT NOT NULL,
+                error TEXT,
+                failed_at TEXT NOT NULL,
+                retry_count INTEGER NOT NULL DEFAULT 0,
+                replayed_at TEXT
+            )
+        """)
+        connection.commit()
+
+
+def record_alert_event(db_path: str, fingerprint: str, channel: str,
+                       status: str, payload: Dict[str, Any],
+                       status_code: Optional[int] = None,
+                       error: str = '', attempt: int = 1) -> None:
+    initialize_alert_event_database(db_path)
+    with sqlite3.connect(db_path, timeout=10) as connection:
+        connection.execute("""
+            INSERT INTO alert_events(
+                fingerprint, channel, status, status_code, error,
+                payload_json, attempt, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            fingerprint, channel, status, status_code, error,
+            json.dumps(sanitize_alert_audit_value(payload), sort_keys=True,
+                       ensure_ascii=False), int(attempt),
+            datetime.now(timezone.utc).isoformat(),
+        ))
+        connection.commit()
+
+
+def redact_alert_target(channel: str, target_url: str) -> str:
+    """Return a credential-free logical alert destination for persistence."""
+    known = {
+        'telegram': 'telegram://sendMessage', 'discord': 'discord://webhook',
+        'slack': 'slack://webhook', 'generic': 'generic://webhook',
+        'pagerduty': 'pagerduty://events-v2',
+    }
+    return known.get(str(channel).lower(), 'redacted://target')
+
+
+def sanitize_alert_audit_value(value: Any, key: str = '') -> Any:
+    """Remove secrets from payloads before audit/dead-letter persistence."""
+    sensitive = ('token', 'secret', 'password', 'routing_key', 'webhook',
+                 'authorization', 'api_key', 'access_key')
+    if any(part in key.lower() for part in sensitive):
+        return '<redacted>'
+    if isinstance(value, dict):
+        return {str(k): sanitize_alert_audit_value(v, str(k))
+                for k, v in value.items()}
+    if isinstance(value, (list, tuple, set)):
+        return [sanitize_alert_audit_value(item, key) for item in value]
+    return json_safe_value(value)
+
+
+def record_dead_letter_alert(db_path: str, fingerprint: str, channel: str,
+                             target_url: str, payload: Dict[str, Any],
+                             error: str, retry_count: int) -> None:
+    initialize_alert_event_database(db_path)
+    with sqlite3.connect(db_path, timeout=10) as connection:
+        connection.execute("""
+            INSERT INTO dead_letter_alerts(
+                fingerprint, channel, target_url, payload_json,
+                error, failed_at, retry_count
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            fingerprint, channel, redact_alert_target(channel, target_url),
+            json.dumps(sanitize_alert_audit_value(payload), sort_keys=True,
+                       ensure_ascii=False), error,
+            datetime.now(timezone.utc).isoformat(), int(retry_count),
+        ))
+        connection.commit()
+
+# ============================================================================
+# V5.0.0 UPGRADES 2 & 5: MULTI-CHANNEL ALERTING & EMBEDDED LIVE SSE SERVER
+# ============================================================================
+
+class MultiChannelAlertDispatcher:
+    """Dispatches structured alerts to Discord, Slack, Telegram, PagerDuty, and generic webhooks."""
+
+    def __init__(
+        self,
+        generic_webhook_url: str = "",
+        discord_webhook_url: str = "",
+        slack_webhook_url: str = "",
+        telegram_bot_token: str = "",
+        telegram_chat_id: str = "",
+        pagerduty_routing_key: str = "",
+        dashboard_url: str = "http://localhost:8080/space_weather_report.html",
+        timeout: int = 10,
+        event_db_path: str = "swrl_report/alert_events.db",
+        max_retries: int = 3,
+        http_post=None,
+        sleep_fn=None,
+    ):
+        self.generic_webhook_url = (generic_webhook_url or os.getenv('SPACE_WEATHER_WEBHOOK', '')).strip()
+        self.discord_webhook_url = (discord_webhook_url or os.getenv('SMC_DISCORD_WEBHOOK', '')).strip()
+        self.slack_webhook_url = (slack_webhook_url or os.getenv('SMC_SLACK_WEBHOOK', '')).strip()
+        self.telegram_bot_token = (telegram_bot_token or os.getenv('SMC_TELEGRAM_BOT_TOKEN', '')).strip()
+        self.telegram_chat_id = (telegram_chat_id or os.getenv('SMC_TELEGRAM_CHAT_ID', '')).strip()
+        self.pagerduty_routing_key = (pagerduty_routing_key or os.getenv('SMC_PAGERDUTY_ROUTING_KEY', '')).strip()
+        self.dashboard_url = (dashboard_url or os.getenv('SMC_DASHBOARD_URL', 'http://localhost:8080/space_weather_report.html')).strip()
+        self.timeout = max(1, int(timeout))
+        self.event_db_path = event_db_path
+        self.max_retries = max(1, int(max_retries))
+        self._http_post = http_post or requests.post
+        self._sleep = sleep_fn or time.sleep
+
+    RETRYABLE_HTTP_STATUSES = {408, 425, 429, 500, 502, 503, 504}
+
+    @staticmethod
+    def _safe_record(callback, *args, **kwargs) -> None:
+        try:
+            callback(*args, **kwargs)
+        except sqlite3.Error as exc:
+            logging.warning('Alert audit persistence failed: %s: %s',
+                            type(exc).__name__, exc)
+
+    def _post_with_retry(self, channel_name: str, target_url: str,
+                         payload: Dict[str, Any], fingerprint: str) -> Dict[str, Any]:
+        """POST with retries only for transient network and HTTP failures."""
+        last_error = ''
+        last_status: Optional[int] = None
+        for attempt in range(1, self.max_retries + 1):
+            retry_after: Optional[float] = None
+            try:
+                response = self._http_post(target_url, json=payload, timeout=self.timeout)
+                last_status = response.status_code
+                if response.status_code < 400:
+                    self._safe_record(record_alert_event, self.event_db_path,
+                        fingerprint, channel_name, 'sent', payload,
+                        response.status_code, attempt=attempt)
+                    return {'sent': True, 'status_code': response.status_code,
+                            'attempts': attempt}
+                retryable = response.status_code in self.RETRYABLE_HTTP_STATUSES
+                last_error = f'HTTP {response.status_code}'
+                if retryable:
+                    raw = response.headers.get('Retry-After', '').strip()
+                    try:
+                        retry_after = max(0.0, min(10.0, float(raw))) if raw else None
+                    except ValueError:
+                        retry_after = None
+                terminal = not retryable or attempt >= self.max_retries
+                self._safe_record(record_alert_event, self.event_db_path,
+                    fingerprint, channel_name, 'failed' if terminal else 'retrying',
+                    payload, response.status_code, last_error, attempt)
+                if terminal:
+                    self._safe_record(record_dead_letter_alert, self.event_db_path,
+                        fingerprint, channel_name, target_url, payload, last_error, attempt)
+                    return {'sent': False, 'error': last_error,
+                            'status_code': response.status_code, 'attempts': attempt,
+                            'dead_lettered': True, 'retryable': retryable}
+            except (requests.exceptions.Timeout,
+                    requests.exceptions.ConnectionError) as exc:
+                last_error = type(exc).__name__
+                terminal = attempt >= self.max_retries
+                self._safe_record(record_alert_event, self.event_db_path,
+                    fingerprint, channel_name, 'failed' if terminal else 'retrying',
+                    payload, last_status, last_error, attempt)
+                if terminal:
+                    self._safe_record(record_dead_letter_alert, self.event_db_path,
+                        fingerprint, channel_name, target_url, payload, last_error, attempt)
+                    return {'sent': False, 'error': last_error,
+                            'status_code': last_status, 'attempts': attempt,
+                            'dead_lettered': True, 'retryable': True}
+            except requests.exceptions.RequestException as exc:
+                last_error = type(exc).__name__
+                self._safe_record(record_alert_event, self.event_db_path,
+                    fingerprint, channel_name, 'failed', payload,
+                    last_status, last_error, attempt)
+                self._safe_record(record_dead_letter_alert, self.event_db_path,
+                    fingerprint, channel_name, target_url, payload, last_error, attempt)
+                return {'sent': False, 'error': last_error, 'status_code': last_status,
+                        'attempts': attempt, 'dead_lettered': True, 'retryable': False}
+            delay = retry_after if retry_after is not None else min(10.0, 2.0 ** (attempt - 1))
+            self._sleep(delay)
+        return {'sent': False, 'error': last_error or 'unknown'}
+
+    @staticmethod
+    def score_to_rgb_int(score: int) -> int:
+        s = max(0.0, min(100.0, float(score)))
+        if s <= 50.0:
+            ratio = s / 50.0
+            r = int(round(34 + (245 - 34) * ratio))
+            g = int(round(197 + (158 - 197) * ratio))
+            b = int(round(94 + (11 - 94) * ratio))
+        else:
+            ratio = (s - 50.0) / 50.0
+            r = int(round(245 + (239 - 245) * ratio))
+            g = int(round(158 + (68 - 158) * ratio))
+            b = int(round(11 + (68 - 11) * ratio))
+        return (r << 16) + (g << 8) + b
+
+    @staticmethod
+    def evaluate_escalation_rules(
+        solar_wind: List[SolarWindData],
+        cmes: List[CME],
+        risk_score: int,
+        risk_level: str,
+        nowcast: Optional[Dict[str, Any]] = None,
+        l1_validation: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        reasons: List[str] = []
+        now = datetime.now(timezone.utc)
+
+        cutoff_30m = now - timedelta(minutes=30)
+        recent_sw = [s for s in solar_wind if s.timestamp is not None and s.timestamp >= cutoff_30m and is_finite_number(s.bz)]
+        if len(recent_sw) >= 10:
+            span_minutes = (max(s.timestamp for s in recent_sw) -
+                            min(s.timestamp for s in recent_sw)).total_seconds() / 60.0
+            severe_south = [s for s in recent_sw if s.bz <= -15.0]
+            duty_cycle = len(severe_south) / len(recent_sw)
+            if span_minutes >= 25.0 and duty_cycle >= 0.85:
+                median_bz = L1FleetValidator._nanmedian([s.bz for s in severe_south])
+                reasons.append(
+                    f"SUSTAINED_EXTREME_BZ: IMF Bz <= -15 nT sustained for "
+                    f"{span_minutes:.0f} min (median {median_bz:+.1f} nT, {duty_cycle*100:.0f}% duty cycle)"
+                )
+
+        fast_cmes = [
+            c for c in cmes
+            if c.is_earth_directed and c.speed and float(c.speed) > 1200.0
+            and (now - c.start_time).total_seconds() <= 72 * 3600
+        ]
+        if fast_cmes:
+            fastest = max(fast_cmes, key=lambda c: float(c.speed))
+            reasons.append(
+                f"FAST_HALO_CME: Earth-directed CME with speed {fastest.speed:.0f} km/s "
+                f"launched at {fastest.start_time:%Y-%m-%d %H:%M UTC}"
+            )
+
+        if nowcast and nowcast.get('ssc_detection', {}).get('ssc_horizon_alert'):
+            reasons.append(nowcast['ssc_detection'].get('summary', 'SSC shock horizon detected'))
+
+        if risk_score >= 60 or risk_level in ('SEVERE', 'EXTREME'):
+            reasons.append(f"HIGH_BLENDED_RISK: Mission risk is {risk_level} ({risk_score}/100)")
+
+        if l1_validation and l1_validation.get('divergence_detected') and risk_score >= 40:
+            reasons.append(
+                f"L1_SENSOR_DIVERGENCE: {l1_validation.get('active_source')} diverging from backup fleet"
+            )
+
+        return {
+            'escalated': bool(reasons),
+            'severity': 'critical' if (risk_score >= 80 or len(reasons) >= 2) else ('warning' if reasons else 'info'),
+            'reasons': reasons,
+        }
+
+    def build_discord_payload(self, snapshot: ReportSnapshot,
+                              escalation: Dict[str, Any],
+                              nowcast: Optional[Dict[str, Any]] = None,
+                              l1_validation: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        cond = snapshot.conditions
+        risk = snapshot.risk
+        score = int(risk.get('overall_risk', 0))
+        level = str(risk.get('level', 'UNKNOWN'))
+        r_num, _ = cond['xray']['r_scale']
+        s_num = cond['protons']['s_scale']
+        g_num = cond['geomagnetic']['g_scale']
+
+        badges = f"`R{r_num}` `S{s_num}` `G{g_num}`"
+        nowcast_str = "Unavailable"
+        if nowcast and nowcast.get('available'):
+            preds = nowcast.get('predictions', {})
+            p1 = preds.get('1h', {})
+            p3 = preds.get('3h', {})
+            nowcast_str = (
+                f"**+1h:** Dst {p1.get('dst_nt', 0):.0f} nT (Kp {p1.get('kp', 0):.1f})\n"
+                f"**+3h:** Dst {p3.get('dst_nt', 0):.0f} nT (Kp {p3.get('kp', 0):.1f})"
+            )
+
+        fleet_str = f"{cond['solar_wind']['source']} (Nominal)"
+        if l1_validation:
+            fleet_str = f"{l1_validation.get('active_source')} [{l1_validation.get('fleet_status')}]"
+        bz_label = (f"{cond['solar_wind']['bz']:+.1f} nT"
+                    if is_finite_number(cond['solar_wind']['bz']) else "N/A")
+
+        fields = [
+            {"name": "Blended Risk", "value": f"**{level}** ({score}/100)", "inline": True},
+            {"name": "NOAA Scales", "value": badges, "inline": True},
+            {"name": "L1 Telemetry", "value": fleet_str, "inline": True},
+            {
+                "name": "Solar Wind & IMF",
+                "value": (f"Speed: `{cond['solar_wind']['speed']:.0f} km/s`\n"
+                          f"Bz: `{bz_label}` | "
+                          f"Density: `{cond['solar_wind']['density']:.1f} cm^-3`"),
+                "inline": True,
+            },
+            {
+                "name": "Geomagnetic & X-Ray",
+                "value": (f"Kp: `{cond['geomagnetic']['kp']:.1f}` | "
+                          f"Dst: `{cond['geomagnetic']['dst']:.0f} nT`\n"
+                          f"X-Ray: `{cond['xray']['classification']}`"),
+                "inline": True,
+            },
+            {"name": "1-3h ML Nowcast", "value": nowcast_str, "inline": True},
+        ]
+
+        if escalation.get('reasons'):
+            fields.append({
+                "name": "Escalation Triggers",
+                "value": "\n".join(f"• {r}" for r in escalation['reasons'][:5]),
+                "inline": False,
+            })
+
+        return {
+            "username": "Solar Mission Control",
+            "embeds": [{
+                "title": f"Space Weather Advisory: {level} ({score}/100)",
+                "url": self.dashboard_url,
+                "description": (
+                    f"Dominant Factor: **{risk.get('dominant_factor', 'N/A')}** — "
+                    f"{(risk.get('concerns') or ['Nominal'])[0]}"
+                ),
+                "color": self.score_to_rgb_int(score),
+                "fields": fields,
+                "footer": {
+                    "text": f"Solar Mission Control v{snapshot.software_version} | Run {snapshot.run_id_short}"
+                },
+                "timestamp": snapshot.generated_at.astimezone(timezone.utc).isoformat(),
+            }],
+        }
+
+    def build_slack_payload(self, snapshot: ReportSnapshot,
+                            escalation: Dict[str, Any],
+                            nowcast: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        cond = snapshot.conditions
+        risk = snapshot.risk
+        score = int(risk.get('overall_risk', 0))
+        level = str(risk.get('level', 'UNKNOWN'))
+        r_num, _ = cond['xray']['r_scale']
+        s_num = cond['protons']['s_scale']
+        g_num = cond['geomagnetic']['g_scale']
+
+        dst_1h = "N/A"
+        if nowcast and nowcast.get('available'):
+            dst_1h = f"{nowcast['predictions']['1h']['dst_nt']:.0f} nT (Kp {nowcast['predictions']['1h']['kp']:.1f})"
+        bz_label = (f"{cond['solar_wind']['bz']:+.1f} nT"
+                    if is_finite_number(cond['solar_wind']['bz']) else "N/A")
+
+        blocks: List[Dict[str, Any]] = [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": f"Solar Mission Control: {level} ({score}/100)",
+                },
+            },
+            {
+                "type": "section",
+                "fields": [
+                    {"type": "mrkdwn", "text": f"*NOAA Scales:*\n`R{r_num}` `S{s_num}` `G{g_num}`"},
+                    {"type": "mrkdwn", "text": f"*Dominant Factor:*\n{risk.get('dominant_factor', 'N/A')}"},
+                    {"type": "mrkdwn", "text": f"*Solar Wind ({cond['solar_wind']['source']}):*\n{cond['solar_wind']['speed']:.0f} km/s | Bz {bz_label}"},
+                    {"type": "mrkdwn", "text": f"*Geomagnetic & Nowcast (+1h):*\nKp {cond['geomagnetic']['kp']:.1f} | Dst {cond['geomagnetic']['dst']:.0f} nT -> {dst_1h}"},
+                ],
+            },
+        ]
+
+        if escalation.get('reasons'):
+            blocks.append({
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": "*Escalation Triggers:*\n" + "\n".join(f"• {r}" for r in escalation['reasons'][:5]),
+                },
+            })
+
+        blocks.extend([
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "text": {"type": "plain_text", "text": "Open Mission Control Dashboard"},
+                        "url": self.dashboard_url,
+                        "style": "danger" if score >= 60 else "primary",
+                    }
+                ],
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": f"Run `{snapshot.run_id_short}` | Generated {snapshot.generated_at:%Y-%m-%d %H:%M UTC}",
+                    }
+                ],
+            },
+        ])
+        return {"text": f"Solar Mission Control Alert: {level} ({score}/100)", "blocks": blocks}
+
+    @staticmethod
+    def _escape_telegram_md2(text: Any) -> str:
+        raw = str(text)
+        specials = r'_*[]()~`>#+-=|{}.!'
+        return ''.join('\\' + ch if ch in specials else ch for ch in raw)
+
+    def build_telegram_payload(self, snapshot: ReportSnapshot,
+                               escalation: Dict[str, Any],
+                               nowcast: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        esc = self._escape_telegram_md2
+        cond = snapshot.conditions
+        risk = snapshot.risk
+        score = int(risk.get('overall_risk', 0))
+        level = str(risk.get('level', 'UNKNOWN'))
+        r_num, _ = cond['xray']['r_scale']
+        s_num = cond['protons']['s_scale']
+        g_num = cond['geomagnetic']['g_scale']
+
+        bypass_mute = bool(level in ('SEVERE', 'EXTREME') or escalation.get('escalated'))
+        sw_speed_txt = esc(f"{cond['solar_wind']['speed']:.0f} km/s")
+        sw_bz_txt = esc(f"{cond['solar_wind']['bz']:+.1f} nT" if is_finite_number(cond['solar_wind']['bz']) else "N/A")
+        kp_txt = esc(f"{cond['geomagnetic']['kp']:.1f}")
+        dst_txt = esc(f"{cond['geomagnetic']['dst']:.0f} nT")
+
+        lines = [
+            f"*{esc('SOLAR MISSION CONTROL')}* — *{esc(level)}* \\({esc(score)}/100\\)",
+            f"*Scales:* `R{r_num}` `S{s_num}` `G{g_num}` \\| *Source:* `{esc(cond['solar_wind']['source'])}`",
+            f"*Solar Wind:* `{sw_speed_txt}` \\| *IMF Bz:* `{sw_bz_txt}`",
+            f"*Geomagnetic:* Kp `{kp_txt}` \\| Dst `{dst_txt}`",
+            f"*X\\-Ray Class:* `{esc(cond['xray']['classification'])}`",
+        ]
+        if nowcast and nowcast.get('available'):
+            p1 = nowcast['predictions']['1h']
+            p3 = nowcast['predictions']['3h']
+            d1_txt = esc(f"{p1['dst_nt']:.0f}")
+            d3_txt = esc(f"{p3['dst_nt']:.0f} nT")
+            k1_txt = esc(f"{p1['kp']:.1f}")
+            k3_txt = esc(f"{p3['kp']:.1f}")
+            lines.append(
+                f"*Nowcast \\+1h / \\+3h:* Dst `{d1_txt}` / `{d3_txt}` \\(Kp `{k1_txt}` / `{k3_txt}`\\)"
+            )
+        if escalation.get('reasons'):
+            lines.append("\n*Escalation Triggers:*")
+            for r in escalation['reasons'][:4]:
+                lines.append(f"• {esc(r)}")
+
+        lines.append(f"\n[Open Live Dashboard]({esc(self.dashboard_url)})")
+
+        return {
+            "chat_id": self.telegram_chat_id,
+            "text": "\n".join(lines),
+            "parse_mode": "MarkdownV2",
+            "disable_notification": not bypass_mute,
+            "disable_web_page_preview": True,
+        }
+
+    def build_pagerduty_payload(self, snapshot: ReportSnapshot,
+                                escalation: Dict[str, Any],
+                                fingerprint: str) -> Dict[str, Any]:
+        cond = snapshot.conditions
+        risk = snapshot.risk
+        score = int(risk.get('overall_risk', 0))
+        level = str(risk.get('level', 'UNKNOWN'))
+        return {
+            "routing_key": self.pagerduty_routing_key,
+            "event_action": "trigger",
+            "dedup_key": fingerprint,
+            "client": "Solar Mission Control",
+            "client_url": self.dashboard_url,
+            "payload": {
+                "summary": f"[Solar Mission Control] {level} ({score}/100) - {(escalation.get('reasons') or risk.get('concerns') or ['Space weather alert'])[0]}",
+                "timestamp": snapshot.generated_at.astimezone(timezone.utc).isoformat(),
+                "source": f"L1-{cond['solar_wind']['source']}",
+                "severity": escalation.get('severity', 'warning'),
+                "component": risk.get('dominant_factor', 'SpaceWeather'),
+                "custom_details": {
+                    "risk_score": score,
+                    "risk_level": level,
+                    "solar_wind_speed_kms": cond['solar_wind']['speed'],
+                    "imf_bz_nt": cond['solar_wind']['bz'],
+                    "kp_index": cond['geomagnetic']['kp'],
+                    "dst_nt": cond['geomagnetic']['dst'],
+                    "escalation_reasons": escalation.get('reasons', []),
+                },
+            },
+        }
+
+    def dispatch_all(
+        self,
+        base_payload: Dict[str, Any],
+        snapshot: ReportSnapshot,
+        solar_wind: List[SolarWindData],
+        cmes: List[CME],
+        nowcast: Optional[Dict[str, Any]] = None,
+        l1_validation: Optional[Dict[str, Any]] = None,
+        dry_run: bool = False,
+        only_on_escalation: bool = False,
+    ) -> Dict[str, Any]:
+        fingerprint = _alert_fingerprint(base_payload)
+        escalation = self.evaluate_escalation_rules(
+            solar_wind=solar_wind,
+            cmes=cmes,
+            risk_score=int(snapshot.risk.get('overall_risk', 0)),
+            risk_level=str(snapshot.risk.get('level', 'NOMINAL')),
+            nowcast=nowcast,
+            l1_validation=l1_validation,
+        )
+
+        if only_on_escalation and not escalation['escalated']:
+            return {
+                'sent': False,
+                'skipped': 'Escalation thresholds not tripped',
+                'fingerprint': fingerprint,
+                'escalation': escalation,
+            }
+
+        channel_payloads: Dict[str, Tuple[str, Dict[str, Any]]] = {}
+        if self.generic_webhook_url:
+            enriched = dict(base_payload)
+            enriched['escalation'] = escalation
+            if nowcast:
+                enriched['nowcast'] = nowcast.get('predictions')
+            if l1_validation:
+                enriched['l1_fleet_status'] = l1_validation.get('fleet_status')
+            channel_payloads['generic'] = (self.generic_webhook_url, enriched)
+
+        if self.discord_webhook_url:
+            channel_payloads['discord'] = (
+                self.discord_webhook_url,
+                self.build_discord_payload(snapshot, escalation, nowcast, l1_validation),
+            )
+
+        if self.slack_webhook_url:
+            channel_payloads['slack'] = (
+                self.slack_webhook_url,
+                self.build_slack_payload(snapshot, escalation, nowcast),
+            )
+
+        if self.telegram_bot_token and self.telegram_chat_id:
+            tg_url = f"https://api.telegram.org/bot{self.telegram_bot_token}/sendMessage"
+            channel_payloads['telegram'] = (
+                tg_url,
+                self.build_telegram_payload(snapshot, escalation, nowcast),
+            )
+
+        if self.pagerduty_routing_key and escalation['escalated']:
+            channel_payloads['pagerduty'] = (
+                "https://events.pagerduty.com/v2/enqueue",
+                self.build_pagerduty_payload(snapshot, escalation, fingerprint),
+            )
+
+        if dry_run:
+            return {
+                'dry_run': True,
+                'fingerprint': fingerprint,
+                'escalation': escalation,
+                'channels_prepared': list(channel_payloads.keys()),
+                'payloads': {k: v[1] for k, v in channel_payloads.items()},
+            }
+
+        if not channel_payloads:
+            return {
+                'sent': False,
+                'skipped': 'No webhook or platform credentials configured',
+                'fingerprint': fingerprint,
+                'escalation': escalation,
+            }
+
+        results: Dict[str, Any] = {}
+        any_sent = False
+        for channel_name, (target_url, ch_payload) in channel_payloads.items():
+            outcome = self._post_with_retry(
+                channel_name, target_url, ch_payload, fingerprint)
+            results[channel_name] = outcome
+            if outcome.get('sent'):
+                any_sent = True
+
+        return {
+            'sent': any_sent,
+            'fingerprint': fingerprint,
+            'escalation': escalation,
+            'channels': results,
+        }
+
+
+class MissionControlHTTPServer:
+    """Zero-dependency asyncio HTTP + Server-Sent Events (SSE) server."""
+
+    RANGE_HOURS = {
+        '1h': 1, '3h': 3, '6h': 6, '12h': 12,
+        '24h': 24, '48h': 48, '72h': 72, '7d': 168,
+    }
+
+    def __init__(self, app: 'SolarMissionControl', host: str = '127.0.0.1',
+                 port: int = 8080, api_token: Optional[str] = None,
+                 cors_origin: Optional[str] = None):
+        self.app = app
+        self.output_dir = os.path.abspath(app.output_dir)
+        self.host = str(host).strip() or '127.0.0.1'
+        self.port = int(port)
+        self.api_token = (api_token if api_token is not None else
+                          os.environ.get('SMC_API_TOKEN', '')).strip()
+        configured_origin = (cors_origin if cors_origin is not None else
+                             os.environ.get('SMC_CORS_ORIGIN', '')).strip()
+        # Wildcard CORS is deliberately forbidden. Same-origin browser requests
+        # require no Access-Control-Allow-Origin header.
+        self.cors_origin = configured_origin if configured_origin != '*' else ''
+        self._sensitive_paths = {
+            '/events', '/metrics', '/api/snapshot', '/api/telemetry',
+            '/api/nowcast', '/api/alerts/history',
+            '/api/verification/history', '/api/l1/consensus',
+        }
+        self._sse_queues: set = set()
+        self._server = None
+        self._event_sequence = 0
+        self._event_history = deque(maxlen=100)
+        self._last_event_state: Dict[str, Any] = {
+            'risk_score': None, 'risk_level': None, 'l1_divergence': None,
+            'nowcast_generated_at': None, 'cme_arrival_keys': set(),
+            'nowcast_degraded_horizons': (),
+        }
+        self._started_at = datetime.now(timezone.utc)
+        self._alerts_sent_total: Dict[str, int] = defaultdict(int)
+
+    @staticmethod
+    def _is_loopback_host(host: str) -> bool:
+        candidate = str(host).strip().lower().strip('[]')
+        return candidate in {'127.0.0.1', '::1', 'localhost'}
+
+    @staticmethod
+    def _is_forbidden_static_path(rel_path: str) -> bool:
+        lowered = str(rel_path).strip().lower()
+        forbidden_suffixes = (
+            '.db', '.sqlite', '.sqlite3', '.db-wal', '.db-shm',
+            '.db-journal', '.parquet', '.tmp',
+        )
+        return lowered.endswith(forbidden_suffixes) or any(
+            part.startswith('.') for part in lowered.split('/') if part
+        )
+
+    def _requires_auth(self, path: str) -> bool:
+        return bool(
+            self.api_token and (
+                path in self._sensitive_paths
+                or path == '/report_snapshot.json'
+                or path.startswith('/api/verification/')
+                or path.startswith('/data/')
+            )
+        )
+
+    def _authorized(self, headers: Dict[str, str],
+                    query: Optional[Dict[str, List[str]]] = None) -> bool:
+        if not self.api_token:
+            return True
+        supplied = headers.get('authorization', '').strip()
+        if supplied:
+            scheme, _, candidate = supplied.partition(' ')
+            if scheme.lower() == 'bearer' and candidate.strip():
+                return hmac.compare_digest(candidate.strip(), self.api_token)
+        header_token = headers.get('x-api-token', '').strip()
+        if header_token:
+            return hmac.compare_digest(header_token, self.api_token)
+        if query:
+            query_token = str((query.get('token') or [''])[0]).strip()
+            if query_token:
+                return hmac.compare_digest(query_token, self.api_token)
+        return False
+
+    async def emit_event(self, event_name: str, data: Dict[str, Any]) -> None:
+        """Enrich, retain, and broadcast a named SSE event."""
+        self._event_sequence += 1
+        enriched = {
+            'event_id': self._event_sequence,
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'run_id': getattr(self.app.report_generator, 'run_id', None),
+            **data,
+        }
+        frame = (
+            f"id: {self._event_sequence}\n"
+            f"event: {event_name}\n"
+            f"data: {json.dumps(json_safe_value(enriched), ensure_ascii=False, allow_nan=False)}\n\n"
+        ).encode('utf-8')
+        self._event_history.append((self._event_sequence, event_name, frame))
+        stale = []
+        for q in list(self._sse_queues):
+            try:
+                q.put_nowait(frame)
+            except asyncio.QueueFull:
+                stale.append(q)
+        for q in stale:
+            self._sse_queues.discard(q)
+
+    async def broadcast_event(self, event_name: str, data: Dict[str, Any]) -> None:
+        """Backward-compatible alias for enriched SSE emission."""
+        await self.emit_event(event_name, data)
+
+    async def emit_state_changes(self) -> None:
+        """Emit risk, L1, nowcast, and CME events only when state changes."""
+        snapshot = self.app.snapshot
+        if snapshot is None:
+            return
+        risk = dict(snapshot.risk or {})
+        aggregator = self.app.aggregator
+        l1 = dict(getattr(aggregator, 'l1_validation', {}) or {})
+        nowcast = dict(getattr(aggregator, 'nowcast_result', {}) or {})
+        score = int(risk.get('overall_risk', 0))
+        level = str(risk.get('level', 'UNKNOWN'))
+        old_score = self._last_event_state['risk_score']
+        old_level = self._last_event_state['risk_level']
+        if old_score is None or abs(score - old_score) >= 5 or level != old_level:
+            await self.emit_event('risk_update', {
+                'level': level, 'score': score, 'previous_level': old_level,
+                'previous_score': old_score, 'dominant_factor': risk.get('dominant_factor'),
+                'concerns': list(risk.get('concerns', []))[:3],
+            })
+        self._last_event_state['risk_score'] = score
+        self._last_event_state['risk_level'] = level
+
+        divergence = bool(l1.get('divergence_detected', False))
+        if divergence != self._last_event_state['l1_divergence']:
+            await self.emit_event('l1_divergence', {
+                'active': divergence, 'active_source': l1.get('active_source'),
+                'fleet_status': l1.get('fleet_status'),
+                'recommended_source': l1.get('recommended_source'),
+                'warnings': list(l1.get('warnings', [])), 'deltas': l1.get('deltas', {}),
+            })
+        self._last_event_state['l1_divergence'] = divergence
+
+        generated = nowcast.get('generated_at')
+        if nowcast.get('available') and generated != self._last_event_state['nowcast_generated_at']:
+            await self.emit_event('nowcast_update', {
+                'generated_at': generated, 'model_type': nowcast.get('model_type'),
+                'predictions': nowcast.get('predictions', {}),
+                'validation_metrics': nowcast.get('validation_metrics', {}),
+                'ssc_detection': nowcast.get('ssc_detection', {}),
+            })
+            self._last_event_state['nowcast_generated_at'] = generated
+
+        verification = dict(getattr(aggregator, 'verification_summary', {}) or {})
+        degraded = tuple(sorted(verification.get('degraded_horizons') or []))
+        if degraded != self._last_event_state['nowcast_degraded_horizons']:
+            if degraded:
+                await self.emit_event('nowcast_degradation', {
+                    'active': True, 'degraded_horizons': list(degraded),
+                    'horizons': verification.get('horizons', {}),
+                })
+            self._last_event_state['nowcast_degraded_horizons'] = degraded
+
+        now = datetime.now(timezone.utc)
+        horizon = now + timedelta(hours=24)
+        arrivals = []
+        for cme in getattr(aggregator, 'cmes', []):
+            if not cme.is_earth_directed:
+                continue
+            eta = aggregator.estimate_cme_eta(cme)
+            if eta is None or not now <= eta <= horizon:
+                continue
+            key = (cme.start_time.isoformat(), round(float(cme.speed or 0), 1), eta.isoformat())
+            arrivals.append({'key': key, 'launch_time': key[0], 'speed_kms': key[1], 'eta': key[2]})
+        current = {row['key'] for row in arrivals}
+        previous = self._last_event_state['cme_arrival_keys']
+        fresh = [row for row in arrivals if row['key'] not in previous]
+        if fresh:
+            await self.emit_event('cme_arrival', {
+                'new_count': len(fresh), 'soonest_eta': min(row['eta'] for row in fresh),
+                'fastest_speed_kms': max(row['speed_kms'] for row in fresh), 'arrivals': fresh,
+            })
+        self._last_event_state['cme_arrival_keys'] = current
+
+    def _health_payload(self) -> Dict[str, Any]:
+        last_update = getattr(self.app.aggregator, 'last_update', None)
+        return {
+            'status': 'healthy', 'version': VERSION,
+            'uptime_seconds': round((datetime.now(timezone.utc) - self._started_at).total_seconds(), 1),
+            'last_successful_acquisition': last_update.isoformat() if last_update else None,
+            'sse_clients': len(self._sse_queues), 'events_retained': len(self._event_history),
+            'dependencies': dependency_health().get('dependencies', {}),
+        }
+
+    def _ready_payload(self) -> Tuple[int, Dict[str, Any]]:
+        now = datetime.now(timezone.utc)
+        agg = self.app.aggregator
+        def age(records, getter):
+            stamps = []
+            for record in records:
+                try:
+                    stamp = getter(record)
+                    if stamp:
+                        stamps.append(stamp)
+                except Exception:
+                    continue
+            return max(0.0, (now - max(stamps)).total_seconds()) if stamps else None
+        wind_age = age(getattr(agg, 'solar_wind_data', []), lambda x: x.timestamp)
+        kp_age = age(getattr(agg, 'kp_data', []), lambda x: parse_swpc_time(x.get('time_tag')))
+        checks = {
+            'telemetry_store': hasattr(agg, 'store'),
+            'solar_wind_recent': wind_age is not None and wind_age <= 1800,
+            'kp_recent': kp_age is not None and kp_age <= 21600,
+            'snapshot_available': bool(self.app.snapshot),
+            'nowcast_available': bool((getattr(agg, 'nowcast_result', {}) or {}).get('available')),
+        }
+        operational = all(checks[k] for k in ('telemetry_store','solar_wind_recent','kp_recent','snapshot_available'))
+        degraded = operational and not checks['nowcast_available']
+        return (200 if operational else 503), {
+            'ready': operational, 'degraded': degraded,
+            'status': 'degraded' if degraded else ('ready' if operational else 'not_ready'),
+            'checks': checks, 'ages_seconds': {'solar_wind': wind_age, 'kp': kp_age},
+        }
+
+    @staticmethod
+    def _prometheus_label(value: Any) -> str:
+        return str(value).replace('\\', '\\\\').replace('\n', '\\n').replace('"', '\\"')
+
+    def _metrics_text(self) -> str:
+        snapshot = self.app.snapshot
+        risk = snapshot.risk if snapshot else {}
+        agg = self.app.aggregator
+        l1 = getattr(agg, 'l1_validation', {}) or {}
+        nowcast = getattr(agg, 'nowcast_result', {}) or {}
+        level = self._prometheus_label(risk.get('level', 'UNKNOWN'))
+        source = self._prometheus_label(l1.get('active_source', 'Unknown'))
+        lines = [
+            '# HELP smc_risk_score Current blended mission risk score.',
+            '# TYPE smc_risk_score gauge',
+            f'smc_risk_score{{level="{level}"}} {float(risk.get("overall_risk", 0))}',
+            '# HELP smc_l1_fleet_divergence Whether L1 fleet divergence is active.',
+            '# TYPE smc_l1_fleet_divergence gauge',
+            f'smc_l1_fleet_divergence{{source="{source}"}} {1 if l1.get("divergence_detected") else 0}',
+            '# HELP smc_sse_clients Connected SSE clients.', '# TYPE smc_sse_clients gauge',
+            f'smc_sse_clients {len(self._sse_queues)}',
+        ]
+        for horizon, metrics in (nowcast.get('validation_metrics') or {}).items():
+            if metrics.get('mae_nt') is not None:
+                lines.append(f'smc_nowcast_mae_nt{{horizon="{self._prometheus_label(horizon)}"}} {metrics["mae_nt"]}')
+        verification = getattr(agg, 'verification_summary', {}) or {}
+        for horizon_key, values in (verification.get('horizons') or {}).items():
+            label = self._prometheus_label(horizon_key)
+            lines.append(f'smc_nowcast_verified_samples{{horizon="{label}"}} {int(values.get("sample_count") or 0)}')
+            if values.get('skill_score') is not None:
+                lines.append(f'smc_nowcast_skill_score{{horizon="{label}"}} {float(values["skill_score"]):.4f}')
+            if values.get('rmse_nt') is not None:
+                lines.append(f'smc_nowcast_rmse_nt{{horizon="{label}"}} {float(values["rmse_nt"]):.3f}')
+            if values.get('empirical_coverage_rate') is not None:
+                lines.append(f'smc_nowcast_coverage_ratio{{horizon="{label}"}} {float(values["empirical_coverage_rate"]):.3f}')
+            if values.get('roc_auc') is not None:
+                lines.append(f'smc_nowcast_roc_auc{{horizon="{label}"}} {float(values["roc_auc"]):.4f}')
+            if values.get('reliability_slope') is not None:
+                lines.append(f'smc_nowcast_reliability_slope{{horizon="{label}"}} {float(values["reliability_slope"]):.4f}')
+        kp_verification=getattr(agg,'kp_verification_summary',{}) or {}
+        for method_name,values in (kp_verification.get('methods') or {}).items():
+            method_label=self._prometheus_label(method_name)
+            lines.append(f'smc_kp_three_way_samples{{method="{method_label}"}} {int(values.get("sample_count") or 0)}')
+            for metric_name in ('mae','rmse','bias','g1_f1','mae_skill_vs_persistence'):
+                value=values.get(metric_name)
+                if value is not None:
+                    lines.append(f'smc_kp_three_way_{metric_name}{{method="{method_label}"}} {float(value):.4f}')
+        last_update = getattr(agg, 'last_update', None)
+        if last_update:
+            lines.append(f'smc_telemetry_freshness_seconds{{product="acquisition"}} {(datetime.now(timezone.utc)-last_update).total_seconds():.3f}')
+        for name, quality in getattr(agg, 'data_quality', {}).items():
+            score = getattr(quality, 'overall_score', 0)
+            lines.append(f'smc_data_quality_score{{source="{self._prometheus_label(name)}"}} {float(score)}')
+        durable_counts: Dict[str, int] = defaultdict(int)
+        db_path = os.path.join(self.output_dir, 'alert_events.db')
+        if os.path.exists(db_path):
+            try:
+                with sqlite3.connect(db_path, timeout=2) as connection:
+                    for channel, count in connection.execute(
+                            "SELECT channel, COUNT(*) FROM alert_events "
+                            "WHERE status='sent' GROUP BY channel"):
+                        durable_counts[str(channel)] = int(count)
+            except sqlite3.Error:
+                pass
+        for channel in set(self._alerts_sent_total) | set(durable_counts):
+            count = max(self._alerts_sent_total.get(channel, 0), durable_counts.get(channel, 0))
+            lines.append(f'smc_alerts_sent_total{{channel="{self._prometheus_label(channel)}"}} {count}')
+        lines.extend([
+            '# HELP smc_process_start_time_seconds Process start time as Unix epoch seconds.',
+            '# TYPE smc_process_start_time_seconds gauge',
+            f'smc_process_start_time_seconds {self._started_at.timestamp():.3f}',
+        ])
+        return '\n'.join(lines) + '\n'
+
+    def _build_telemetry_api_response(self, range_str: str = '24h') -> Dict[str, Any]:
+        hours = self.RANGE_HOURS.get(range_str.lower(), 24)
+        end = datetime.now(timezone.utc)
+        start = end - timedelta(hours=hours)
+        store = self.app.aggregator.store
+
+        xray = store.get_xray_range(start, end)
+        protons = store.get_protons_range(start, end)
+        wind = store.get_solar_wind_range(start, end, active_only=True)
+        if not wind:
+            wind = store.get_solar_wind_range(start, end, active_only=False)
+        wind_clean, _ = L1FleetValidator.despike_solar_wind(wind)
+        kp = store.get_kp_range(start, end)
+        dst = store.get_dst_range(start, end)
+
+        nowcast = OperationalNowcastEnsemble(store).predict()
+        l1_val = L1FleetValidator.validate_l1_fleet_agreement(store, window_minutes=30)
+        l1_consensus = L1FleetValidator.reconcile_l1_consensus(store, window_minutes=30)
+        verification = ForecastVerifier(store).summarize(window_days=30)
+
+        return {
+            'range': range_str,
+            'hours': hours,
+            'generated_at': end.isoformat(),
+            'l1_validation': l1_val,
+            'l1_consensus': l1_consensus,
+            'nowcast': nowcast,
+            'verification': verification,
+            'kp_three_way_verification': ForecastVerifier(store).summarize_kp_three_way(window_days=90),
+            'input_sensitivity': getattr(self.app.aggregator, 'input_sensitivity', {}),
+            'shock_diagnostics': getattr(self.app.aggregator, 'shock_diagnostics', {}),
+            'coupling_diagnostics': getattr(self.app.aggregator, 'coupling_diagnostics', {}),
+            'xray': [
+                {'t': x.timestamp.isoformat(), 'short': x.flux_short, 'long': x.flux_long}
+                for x in xray[-720:]
+            ],
+            'protons': [
+                {'t': p.timestamp.isoformat(), 'p10': p.flux_10mev, 'p50': p.flux_50mev, 'p100': p.flux_100mev}
+                for p in protons[-720:]
+            ],
+            'solar_wind': [
+                {
+                    't': w.timestamp.isoformat(),
+                    'speed': w.speed,
+                    'density': w.density,
+                    'bz': w.bz,
+                    'bt': w.bt,
+                    'pdyn': round(w.dynamic_pressure, 2),
+                    'coupling': round(w.coupling, 1) if math.isfinite(w.coupling) else None,
+                    'source': w.source,
+                }
+                for w in wind_clean[-720:]
+            ],
+            'kp': kp,
+            'dst': dst,
+            'donki_events': store.get_donki_events_range(start, end),
+            'donki_notifications': store.get_donki_notifications_range(start, end, include_body=False),
+        }
+
+    async def _verification_dashboard(self) -> bytes:
+        # Render an escaped, dependency-free verification dashboard.
+        import html as html_lib
+        store = self.app.aggregator.store
+        verifier = ForecastVerifier(store)
+        loop = asyncio.get_running_loop()
+        summary, kp_summary = await asyncio.gather(
+            loop.run_in_executor(None, verifier.summarize, 30),
+            loop.run_in_executor(None, verifier.summarize_kp_three_way, 90),
+        )
+
+        def cell(value: Any) -> str:
+            return html_lib.escape('N/A' if value is None else str(value))
+
+        dst_rows = ''.join(
+            '<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>'.format(
+                cell(h), cell(m.get('mae_nt')), cell(m.get('rmse_nt')),
+                cell(m.get('skill_score')), cell(m.get('empirical_coverage_rate')))
+            for h, m in (summary.get('horizons') or {}).items())
+        kp_rows = ''.join(
+            '<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>'.format(
+                cell(method), cell(m.get('mae')), cell(m.get('rmse')),
+                cell(m.get('mae_skill_vs_persistence')), cell(m.get('g1_f1')))
+            for method, m in (kp_summary.get('methods') or {}).items())
+        generated = cell(datetime.now(timezone.utc).isoformat())
+        return f'''<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Verification Dashboard</title><style>
+body{{font-family:Arial,sans-serif;margin:0;background:#07111f;color:#e6edf7}}
+main{{max-width:1100px;margin:auto;padding:24px}}h1{{margin-bottom:4px}}
+.card{{background:#101d2e;border:1px solid #28405e;border-radius:14px;padding:18px;margin:18px 0;overflow:auto}}
+table{{border-collapse:collapse;width:100%}}th,td{{border-bottom:1px solid #28405e;padding:9px;text-align:left}}
+th{{color:#7dd3fc}}.muted{{color:#9fb0c5}}</style></head><body><main>
+<h1>Solar Mission Control Verification</h1><p class="muted">Generated {generated}</p>
+<section class="card"><h2>Dst nowcast skill, 30 days</h2><table><thead><tr><th>Horizon</th><th>MAE</th><th>RMSE</th><th>Skill vs persistence</th><th>Coverage</th></tr></thead><tbody>{dst_rows}</tbody></table></section>
+<section class="card"><h2>Three-way Kp verification, 90 days</h2><table><thead><tr><th>Method</th><th>MAE</th><th>RMSE</th><th>Skill</th><th>G1 F1</th></tr></thead><tbody>{kp_rows}</tbody></table></section>
+</main></body></html>'''.encode('utf-8')
+
+    async def _handle_client(self, reader: asyncio.StreamReader,
+                             writer: asyncio.StreamWriter) -> None:
+        try:
+            request_line = await asyncio.wait_for(reader.readline(), timeout=10.0)
+            if not request_line:
+                writer.close()
+                return
+            parts = request_line.decode('utf-8', errors='replace').strip().split(' ')
+            if len(parts) < 2:
+                writer.close()
+                return
+            method, raw_target = parts[0].upper(), parts[1]
+
+            headers: Dict[str, str] = {}
+            while True:
+                line = await asyncio.wait_for(reader.readline(), timeout=5.0)
+                if not line or line in (b'\r\n', b'\n'):
+                    break
+                decoded = line.decode('utf-8', errors='replace').strip()
+                if ':' in decoded:
+                    key, value = decoded.split(':', 1)
+                    headers[key.strip().lower()] = value.strip()
+            parsed = urlparse(raw_target)
+            path = parsed.path
+            query = parse_qs(parsed.query)
+
+            if method != 'GET':
+                await self._send_response(writer, 405, b'Method Not Allowed', 'text/plain')
+                return
+
+            if self._requires_auth(path) and not self._authorized(headers, query):
+                await self._send_response(
+                    writer, 401, b'{"error":"unauthorized"}',
+                    'application/json; charset=utf-8',
+                    extra_headers={'WWW-Authenticate': 'Bearer'})
+                return
+
+            if path == '/events':
+                last_event_id = headers.get('last-event-id')
+                await self._handle_sse(writer, last_event_id)
+                return
+
+            if path == '/metrics':
+                await self._send_response(writer, 200, self._metrics_text().encode('utf-8'),
+                                          'text/plain; version=0.0.4; charset=utf-8')
+                return
+
+            if path == '/health':
+                body = json.dumps(json_safe_value(self._health_payload()), allow_nan=False).encode('utf-8')
+                await self._send_response(writer, 200, body, 'application/json; charset=utf-8')
+                return
+
+            if path == '/ready':
+                status, payload = self._ready_payload()
+                body = json.dumps(json_safe_value(payload), allow_nan=False).encode('utf-8')
+                await self._send_response(writer, status, body, 'application/json; charset=utf-8')
+                return
+
+            if path == '/api/alerts/history':
+                db_path = os.path.join(self.output_dir, 'alert_events.db')
+                limit_raw = (query.get('limit') or ['100'])[0]
+                try:
+                    limit = max(1, min(500, int(limit_raw)))
+                except ValueError:
+                    limit = 100
+                def _load_alert_history() -> Dict[str, Any]:
+                    events: List[Dict[str, Any]] = []
+                    dead_letters: List[Dict[str, Any]] = []
+                    if os.path.exists(db_path):
+                        with sqlite3.connect(db_path, timeout=10) as connection:
+                            connection.row_factory = sqlite3.Row
+                            events = [dict(row) for row in connection.execute(
+                                'SELECT id,fingerprint,channel,status,status_code,error,attempt,created_at '
+                                'FROM alert_events ORDER BY id DESC LIMIT ?', (limit,))]
+                            dead_letters = [dict(row) for row in connection.execute(
+                                'SELECT id,fingerprint,channel,error,failed_at,retry_count,replayed_at '
+                                'FROM dead_letter_alerts ORDER BY id DESC LIMIT ?', (limit,))]
+                    return {'events': events, 'dead_letters': dead_letters}
+                loop = asyncio.get_running_loop()
+                alert_history = await loop.run_in_executor(None, _load_alert_history)
+                body = json.dumps(json_safe_value(alert_history),
+                                  allow_nan=False).encode('utf-8')
+                await self._send_response(writer, 200, body,
+                                          'application/json; charset=utf-8')
+                return
+
+            if path == '/api/verification/dashboard':
+                body = await self._verification_dashboard()
+                await self._send_response(
+                    writer, 200, body, 'text/html; charset=utf-8')
+                return
+
+            if path == '/api/verification/summary':
+                days_raw = (query.get('days') or ['30'])[0]
+                try:
+                    days = max(1, min(365, int(days_raw)))
+                except ValueError:
+                    days = 30
+                verifier = ForecastVerifier(self.app.aggregator.store)
+                loop = asyncio.get_running_loop()
+                payload = await loop.run_in_executor(None, verifier.summarize, days)
+                body = json.dumps(json_safe_value(payload), allow_nan=False).encode('utf-8')
+                await self._send_response(writer, 200, body, 'application/json; charset=utf-8')
+                return
+
+            if path == '/api/verification/kp-three-way':
+                days_raw=(query.get('days') or ['90'])[0]
+                try: days=max(1,min(730,int(days_raw)))
+                except ValueError: days=90
+                verifier=ForecastVerifier(self.app.aggregator.store)
+                loop=asyncio.get_running_loop()
+                payload=await loop.run_in_executor(None,verifier.summarize_kp_three_way,days)
+                body=json.dumps(json_safe_value(payload),allow_nan=False).encode('utf-8')
+                await self._send_response(writer,200,body,'application/json; charset=utf-8')
+                return
+
+            if path == '/api/verification/history':
+                raw = str((query.get('horizon') or ['1'])[0]).lower().replace('h','')
+                try:
+                    horizon_value = int(raw)
+                except ValueError:
+                    horizon_value = 0
+                if horizon_value not in (1,2,3):
+                    await self._send_response(writer, 400, b'{"error":"horizon must be 1, 2, or 3"}', 'application/json')
+                    return
+                end = datetime.now(timezone.utc); start = end - timedelta(days=30)
+                loop = asyncio.get_running_loop()
+                pairs = await loop.run_in_executor(
+                    None, self.app.aggregator.store.get_verified_nowcast_pairs,
+                    start, end, horizon_value)
+                body = json.dumps(json_safe_value({'count':len(pairs),'pairs':pairs}), allow_nan=False).encode('utf-8')
+                await self._send_response(writer, 200, body, 'application/json; charset=utf-8')
+                return
+
+            if path == '/api/l1/consensus':
+                loop = asyncio.get_running_loop()
+                payload = await loop.run_in_executor(
+                    None, L1FleetValidator.reconcile_l1_consensus,
+                    self.app.aggregator.store, 30)
+                body = json.dumps(json_safe_value(payload), allow_nan=False).encode('utf-8')
+                await self._send_response(writer, 200, body, 'application/json; charset=utf-8')
+                return
+
+            if path == '/api/telemetry':
+                rng = (query.get('range') or ['24h'])[0]
+                loop = asyncio.get_running_loop()
+                payload = await loop.run_in_executor(
+                    None, self._build_telemetry_api_response, rng
+                )
+                body = json.dumps(json_safe_value(payload), allow_nan=False).encode('utf-8')
+                await self._send_response(writer, 200, body, 'application/json; charset=utf-8')
+                return
+
+            if path == '/api/nowcast':
+                loop = asyncio.get_running_loop()
+                ensemble = OperationalNowcastEnsemble(self.app.aggregator.store)
+                payload = await loop.run_in_executor(None, ensemble.predict)
+                body = json.dumps(json_safe_value(payload), allow_nan=False).encode('utf-8')
+                await self._send_response(writer, 200, body, 'application/json; charset=utf-8')
+                return
+
+            if path == '/api/snapshot':
+                snap_path = os.path.join(self.output_dir, 'report_snapshot.json')
+                if os.path.exists(snap_path):
+                    with open(snap_path, 'rb') as fh:
+                        body = fh.read()
+                elif self.app.snapshot:
+                    body = json.dumps(self.app.snapshot.to_dict(), allow_nan=False).encode('utf-8')
+                else:
+                    body = b'{"status":"initializing"}'
+                await self._send_response(writer, 200, body, 'application/json; charset=utf-8')
+                return
+
+            rel_path = ('space_weather_report.html' if path in ('/', '/index.html')
+                        else unquote(path).lstrip('/'))
+            if self._is_forbidden_static_path(rel_path):
+                await self._send_response(writer, 404, b'Not Found', 'text/plain')
+                return
+            safe_target = os.path.abspath(os.path.join(self.output_dir, rel_path))
+            try:
+                contained = os.path.commonpath([self.output_dir, safe_target]) == self.output_dir
+            except (ValueError, OSError):
+                contained = False
+            if not contained or not os.path.isfile(safe_target):
+                await self._send_response(writer, 404, b'Not Found', 'text/plain')
+                return
+
+            mime_type, _ = mimetypes.guess_type(safe_target)
+            with open(safe_target, 'rb') as fh:
+                content = fh.read()
+            await self._send_response(writer, 200, content, mime_type or 'application/octet-stream')
+        except (ConnectionResetError, BrokenPipeError, asyncio.IncompleteReadError):
+            logging.debug('HTTP client disconnected before response completed')
+        except Exception:
+            logging.exception('Unhandled Mission Control HTTP request failure')
+            try:
+                await self._send_response(
+                    writer, 500, b'{"error":"internal_server_error"}',
+                    'application/json; charset=utf-8')
+            except (ConnectionResetError, BrokenPipeError, RuntimeError):
+                pass
+        finally:
+            try:
+                writer.close()
+                await writer.wait_closed()
+            except Exception:
+                pass
+
+    async def _send_response(self, writer: asyncio.StreamWriter, status: int,
+                             body: bytes, content_type: str,
+                             extra_headers: Optional[Dict[str, str]] = None) -> None:
+        status_text = {
+            200: 'OK', 400: 'Bad Request', 401: 'Unauthorized',
+            404: 'Not Found', 405: 'Method Not Allowed',
+            500: 'Internal Server Error', 503: 'Service Unavailable',
+        }.get(status, 'OK')
+        is_html = str(content_type).lower().startswith('text/html')
+        frame_policy = 'SAMEORIGIN' if is_html else 'DENY'
+        header_lines = [
+            f"HTTP/1.1 {status} {status_text}",
+            f"Content-Type: {content_type}",
+            f"Content-Length: {len(body)}",
+            "Cache-Control: no-store",
+            "Pragma: no-cache",
+            "X-Content-Type-Options: nosniff",
+            f"X-Frame-Options: {frame_policy}",
+            "Referrer-Policy: no-referrer",
+            "Permissions-Policy: camera=(), microphone=(), geolocation=()",
+            "Content-Security-Policy: default-src 'self'; img-src 'self' data:; "
+            "style-src 'self' 'unsafe-inline'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
+            "connect-src 'self' https://formspree.io; "
+            "frame-src 'self'; frame-ancestors 'self'",
+            "Connection: close",
+        ]
+        if self.cors_origin:
+            header_lines.extend([
+                f"Access-Control-Allow-Origin: {self.cors_origin}",
+                "Vary: Origin",
+            ])
+        for key, value in (extra_headers or {}).items():
+            safe_key = str(key).replace('\r', '').replace('\n', '')
+            safe_value = str(value).replace('\r', '').replace('\n', '')
+            header_lines.append(f"{safe_key}: {safe_value}")
+        headers = ('\r\n'.join(header_lines) + '\r\n\r\n').encode('utf-8')
+        writer.write(headers + body)
+        await writer.drain()
+
+    async def _handle_sse(self, writer: asyncio.StreamWriter, last_event_id: Optional[str] = None) -> None:
+        sse_lines = [
+            "HTTP/1.1 200 OK",
+            "Content-Type: text/event-stream",
+            "Cache-Control: no-store",
+            "Pragma: no-cache",
+            "X-Content-Type-Options: nosniff",
+            "X-Frame-Options: DENY",
+            "Referrer-Policy: no-referrer",
+            "Connection: keep-alive",
+        ]
+        if self.cors_origin:
+            sse_lines.extend([
+                f"Access-Control-Allow-Origin: {self.cors_origin}",
+                "Vary: Origin",
+            ])
+        headers = ('\r\n'.join(sse_lines) + '\r\n\r\n').encode('utf-8')
+        writer.write(headers)
+        await writer.drain()
+
+        client_queue: asyncio.Queue = asyncio.Queue(maxsize=32)
+        self._sse_queues.add(client_queue)
+        try:
+            if last_event_id:
+                try:
+                    resume_after = int(last_event_id)
+                except ValueError:
+                    resume_after = 0
+                for event_id, _, frame in list(self._event_history):
+                    if event_id > resume_after:
+                        writer.write(frame)
+                await writer.drain()
+            init_pulse = self._build_live_pulse()
+            writer.write(f"event: telemetry_tick\ndata: {json.dumps(json_safe_value(init_pulse), allow_nan=False)}\n\n".encode('utf-8'))
+            await writer.drain()
+
+            while True:
+                try:
+                    frame = await asyncio.wait_for(client_queue.get(), timeout=20.0)
+                    writer.write(frame)
+                    await writer.drain()
+                except asyncio.TimeoutError:
+                    pulse = self._build_live_pulse()
+                    writer.write(f"event: telemetry_tick\ndata: {json.dumps(json_safe_value(pulse), allow_nan=False)}\n\n".encode('utf-8'))
+                    await writer.drain()
+        except Exception:
+            pass
+        finally:
+            self._sse_queues.discard(client_queue)
+
+    def _build_live_pulse(self) -> Dict[str, Any]:
+        cond = self.app.aggregator.get_current_conditions()
+        _, risk = self.app.report_generator._risk_inputs()
+        nowcast = getattr(self.app.aggregator, 'nowcast_result', None) or {}
+        l1_val = getattr(self.app.aggregator, 'l1_validation', None) or {}
+        return {
+            'timestamp': datetime.now(timezone.utc).isoformat(),
+            'run_id': self.app.report_generator.run_id,
+            'risk_level': risk.get('level', 'UNKNOWN'),
+            'risk_score': risk.get('overall_risk', 0),
+            'kp': cond['geomagnetic']['kp'],
+            'dst': cond['geomagnetic']['dst'],
+            'solar_wind_speed': cond['solar_wind']['speed'],
+            'solar_wind_density': cond['solar_wind']['density'],
+            'bz': cond['solar_wind']['bz'],
+            'bt': cond['solar_wind']['bt'],
+            'sw_source': cond['solar_wind']['source'],
+            'xray_class': cond['xray']['classification'],
+            'xray_flux': cond['xray']['current_flux'],
+            'proton_10mev': cond['protons']['flux_10mev'],
+            'l1_fleet_status': l1_val.get('fleet_status', 'NOMINAL'),
+            'divergence_detected': l1_val.get('divergence_detected', False),
+            'nowcast_1h': (nowcast.get('predictions') or {}).get('1h'),
+            'nowcast_3h': (nowcast.get('predictions') or {}).get('3h'),
+        }
+
+    async def start(self) -> None:
+        if not self._is_loopback_host(self.host) and not self.api_token:
+            raise RuntimeError(
+                'Refusing non-loopback HTTP bind without SMC_API_TOKEN. ' 
+                'Set a strong token or use --host 127.0.0.1.')
+        if not self._is_loopback_host(self.host):
+            logging.warning(
+                'Mission Control is bound beyond localhost. Use a TLS reverse proxy; ' 
+                'the embedded server provides bearer authentication but not TLS.')
+        self._server = await asyncio.start_server(self._handle_client, self.host, self.port)
+        print(f"  Live Mission Control Server listening on http://{self.host}:{self.port}")
+        print(f"  SSE Telemetry Stream: http://{self.host}:{self.port}/events")
+        print(f"  Telemetry REST API:   http://{self.host}:{self.port}/api/telemetry?range=24h")
+
+    async def stop(self) -> None:
+        if self._server is not None:
+            self._server.close()
+            await self._server.wait_closed()
+            self._server = None
+
+# ============================================================================
+# STANDALONE V3/V5 OUTPUT, STORAGE, INTERACTIVE, AND ALERT HELPERS
+# ============================================================================
+
+
+def run_v5_regression_suite() -> Dict[str, Any]:
+    """Run deterministic v5.2 verification, consensus, HTTP, and SSE checks."""
+    import tempfile
+    results: Dict[str, bool] = {}
+    now = datetime.now(timezone.utc)
+
+    c, n = L1FleetValidator.hampel_filter_series([400., 400., 400., 2000., 400., 400., 400.])
+    results['1_zero_mad_spike'] = n == 1 and c[3] == 400.
+    c, n = L1FleetValidator.hampel_filter_series([398., 400., 402., 2000., 401., 399., 403.])
+    results['2_nonzero_mad_spike'] = n == 1 and 398 <= c[3] <= 403
+    edge, edge_n = L1FleetValidator.hampel_filter_series(
+        [2000., 400., 400., 400., 400., 400., 400.])
+    results['3_hampel_edge_window'] = edge_n == 1 and edge[0] == 400.
+    nan_case, nan_n = L1FleetValidator.hampel_filter_series(
+        [400., float('nan'), 400., 2000., 400., None, 400.])
+    results['4_hampel_nan_and_none'] = (
+        nan_n == 1 and nan_case[3] == 400. and math.isnan(nan_case[1])
+        and nan_case[5] is None)
+
+    with tempfile.TemporaryDirectory() as td:
+        store = TelemetryStore(os.path.join(td, 'test.db'))
+        one = [SolarWindData(now-timedelta(minutes=i), 420., 5., 1e5, -2., 5., source='A', active=True) for i in range(15)]
+        store.save_solar_wind(one)
+        v_single = L1FleetValidator.validate_l1_fleet_agreement(store, 30, reference_time=now)
+        results['5_single_source'] = v_single['fleet_status'] == 'SINGLE_SOURCE'
+        peer = [SolarWindData(now-timedelta(minutes=i), 425., 5.2, 1e5, -2.5, 5.2, source='B', active=False) for i in range(15)]
+        store.save_solar_wind(peer)
+        v_nominal = L1FleetValidator.validate_l1_fleet_agreement(store, 30, reference_time=now)
+        results['6_nominal_fleet'] = v_nominal['fleet_status'] == 'NOMINAL_AGREEMENT'
+        divergent = [SolarWindData(now-timedelta(minutes=i), 750., 5., 1e5, -18., 20., source='A', active=True) for i in range(15)]
+        store.save_solar_wind(divergent)
+        v_div = L1FleetValidator.validate_l1_fleet_agreement(store, 30, reference_time=now)
+        results['7_fleet_divergence'] = v_div['divergence_detected'] is True
+
+        empty = TelemetryStore(os.path.join(td, 'empty.db'))
+        empty_nc = GeomagneticNowcaster(empty).predict()
+        numpy_json_ok = True
+        if HAS_NUMPY:
+            try:
+                converted = ReportSnapshot._json_value({
+                    'integer': np.int64(7), 'floating': np.float64(2.5),
+                    'boolean': np.bool_(True), 'array': np.asarray([1, 2, 3]),
+                })
+                json.dumps(converted, allow_nan=False)
+                numpy_json_ok = converted == {
+                    'integer': 7, 'floating': 2.5,
+                    'boolean': True, 'array': [1, 2, 3],
+                }
+            except (TypeError, ValueError):
+                numpy_json_ok = False
+
+        # Exercise real Astropy objects when Astropy is installed. Keep the
+        # lightweight mock as an offline fallback so the core suite remains
+        # runnable in minimal deployments.
+        try:
+            if HAS_ASTROPY:
+                from astropy.coordinates import SkyCoord
+                real_coord = SkyCoord(12.5 * u.deg, -4.2 * u.deg, frame='icrs')
+                real_time = Time('2026-10-14T20:39:25', format='isot', scale='utc')
+                real_quantity = 567.25 * (u.km / u.s)
+                astropy_json = ReportSnapshot._json_value({
+                    'coordinate': real_coord,
+                    'time': real_time,
+                    'speed': real_quantity,
+                })
+                json.dumps(astropy_json, allow_nan=False)
+                skycoord_json_ok = (
+                    astropy_json['coordinate'].get('__type__', '').endswith('.SkyCoord')
+                    and astropy_json['coordinate'].get('frame') == 'icrs'
+                    and astropy_json['time'].get('__type__', '').endswith('.Time')
+                    and astropy_json['speed'].get('unit') == 'km / s'
+                    and float(astropy_json['speed']['value']) == 567.25
+                )
+            else:
+                class MockSkyCoord:
+                    def to_string(self):
+                        return '12.5 -4.2'
+                MockSkyCoord.__module__ = 'astropy.coordinates.sky_coordinate'
+                sky_json = ReportSnapshot._json_value(MockSkyCoord())
+                json.dumps(sky_json, allow_nan=False)
+                skycoord_json_ok = (
+                    sky_json.get('__type__', '').endswith('.MockSkyCoord')
+                    and sky_json.get('value') == '12.5 -4.2'
+                )
+        except (TypeError, ValueError, AttributeError):
+            skycoord_json_ok = False
+
+        results['8_snapshot_numpy_and_real_astropy_json'] = (
+            empty_nc['available'] is False
+            and empty_nc['validation_metrics'] == {}
+            and numpy_json_ok
+            and skycoord_json_ok
+        )
+
+        # Real SunPy map test with synthetic in-memory data. This validates
+        # imports, WCS construction, map creation, and coordinate transforms
+        # without depending on VSO/JSOC network availability.
+        if HAS_SUNPY and HAS_ASTROPY and HAS_NUMPY:
+            try:
+                from astropy.coordinates import SkyCoord
+                synthetic_data = np.arange(64 * 64, dtype=float).reshape(64, 64)
+                reference = SkyCoord(0 * u.arcsec, 0 * u.arcsec,
+                                     frame='helioprojective', observer='earth',
+                                     obstime=Time('2026-10-14T20:39:25'))
+                synthetic_header = sunpy.map.make_fitswcs_header(
+                    synthetic_data, reference,
+                    scale=[2.4, 2.4] * u.arcsec / u.pix)
+                synthetic_map = sunpy.map.Map(synthetic_data, synthetic_header)
+                center_pixel = synthetic_map.world_to_pixel(reference)
+                sunpy_ok = (
+                    synthetic_map.data.shape == (64, 64)
+                    and synthetic_map.coordinate_frame.name == 'helioprojective'
+                    and math.isfinite(float(center_pixel.x.value))
+                    and math.isfinite(float(center_pixel.y.value))
+                )
+            except Exception as exc:
+                logging.error('Real SunPy regression failed: %s: %s', type(exc).__name__, exc)
+                sunpy_ok = False
+        else:
+            sunpy_ok = True
+        results['9_real_sunpy_map_wcs'] = sunpy_ok
+
+        # Real PySPEDAS installation test. Resolve mission loaders without
+        # downloading files, and validate the local payload coercion contract.
+        try:
+            import pyspedas
+            import pytplot
+        except ImportError:
+            pyspedas_ok = True
+        else:
+            try:
+                api_for_psp_test = SpaceWeatherAPI()
+                fields_loader = api_for_psp_test._resolve_psp_loader('fields')
+                spc_loader = api_for_psp_test._resolve_psp_loader('spc')
+                coerced = api_for_psp_test._coerce_psp_series({
+                    'x': np.asarray([1.0, 2.0, 3.0]),
+                    'y': np.asarray([[1.0, 2.0, 3.0],
+                                     [4.0, 5.0, 6.0],
+                                     [7.0, 8.0, 9.0]]),
+                })
+                pyspedas_ok = (
+                    callable(fields_loader) and callable(spc_loader)
+                    and coerced is not None and len(coerced[0]) == 3
+                    and api_for_psp_test._classify_psp_series(coerced[1]) == 'vector3'
+                )
+            except Exception as exc:
+                logging.error('Real PySPEDAS regression failed: %s: %s',
+                              type(exc).__name__, exc)
+                pyspedas_ok = False
+        results['10_real_pyspedas_loader_resolution'] = pyspedas_ok
+
+        vectors = [{'dst': -5.-h*.8, 'pdyn': 2.+(h%4)*.2, 'bz': -1.-(h%6),
+                    'speed': 400.+h*2, 'coupling': 500.+h*25} for h in range(42)]
+        fit = GeomagneticNowcaster(store)._fit_autoregressive_ridge(vectors, 1)
+        results['11_hindcast_metrics'] = ((not HAS_NUMPY) or (fit is not None and
+            fit[2].get('validation') == 'chronological_80_20_holdout' and
+            all(k in fit[2] for k in ('mae_nt', 'rmse_nt', 'persistence_rmse_nt', 'skill_score'))))
+
+        nullable = [SolarWindData(now-timedelta(minutes=i),
+                    None if i == 2 else 420., None if i == 3 else 5.,
+                    None if i == 4 else 1e5, None if i == 5 else -2.,
+                    None if i == 6 else 5., source='NULLABLE', active=True)
+                    for i in range(10)]
+        nullable_store = TelemetryStore(os.path.join(td, 'nullable.db'))
+        nullable_store.save_solar_wind(nullable)
+        try:
+            nullable_result = L1FleetValidator.validate_l1_fleet_agreement(
+                nullable_store, 30, reference_time=now)
+            nullable_ok = nullable_result['fleet_status'] == 'SINGLE_SOURCE'
+        except (TypeError, ValueError):
+            nullable_ok = False
+
+        class MalformedAPI:
+            def _get(self, *args, **kwargs):
+                return [{'malformed': None}] if 'mag' in str(args[0]) else 'corrupted_payload'
+        stereo = StereoABeaconClient(MalformedAPI())
+        malformed = stereo.fetch_beacon_solar_wind()
+        unconfigured_stereo = StereoABeaconClient(MalformedAPI())
+        old_mag, old_wind = ENDPOINTS.get('stereo_a_mag'), ENDPOINTS.get('stereo_a_plastic')
+        ENDPOINTS['stereo_a_mag'] = ''; ENDPOINTS['stereo_a_plastic'] = ''
+        try:
+            unconfigured = unconfigured_stereo.fetch_beacon_solar_wind()
+        finally:
+            ENDPOINTS['stereo_a_mag'], ENDPOINTS['stereo_a_plastic'] = old_mag, old_wind
+        results['12_nullable_l1_and_malformed_stereo'] = (
+            nullable_ok and isinstance(malformed, dict) and malformed['available'] is False
+            and unconfigured.get('telemetry_status') == 'UNCONFIGURED'
+            and unconfigured.get('configured') is False)
+
+        conditions = {
+            'xray': {'r_scale': (0, 'None'), 'classification': 'A1.0', 'current_flux': 1e-8},
+            'protons': {'s_scale': 0, 'flux_10mev': 0.1},
+            'geomagnetic': {'g_scale': 0, 'kp': 2.0, 'dst': -5.0},
+            'solar_wind': {'source': 'A', 'speed': 420.0, 'density': 5.0, 'bz': -2.0, 'bt': 5.0},
+        }
+        snap = ReportSnapshot('1.0', VERSION, 'test-run-12345678', 'test-run', now,
+                              conditions, {'overall_risk': 85, 'level': 'EXTREME',
+                              'dominant_factor': 'CME', 'concerns': ['test']}, {}, {}, [], {})
+        disp = MultiChannelAlertDispatcher(
+            generic_webhook_url='https://example.invalid/webhook',
+            discord_webhook_url='https://example.invalid/discord',
+            slack_webhook_url='https://example.invalid/slack',
+            telegram_bot_token='123:ABC', telegram_chat_id='999',
+            pagerduty_routing_key='pd-key')
+        dry = disp.dispatch_all({'risk': 85}, snap, divergent, [], dry_run=True)
+        results['13_dry_run_all_channels'] = (dry.get('dry_run') is True and
+            set(dry.get('channels_prepared', [])) == {'generic', 'discord', 'slack', 'telegram', 'pagerduty'})
+
+        retry_db = os.path.join(td, 'alert_events.db')
+        class FakeResponse:
+            def __init__(self, status_code, headers=None):
+                self.status_code = status_code
+                self.headers = headers or {}
+        calls_400 = {'count': 0}
+        def post_400(*args, **kwargs):
+            calls_400['count'] += 1
+            return FakeResponse(400)
+        permanent = MultiChannelAlertDispatcher(
+            event_db_path=retry_db, max_retries=3, timeout=1,
+            http_post=post_400, sleep_fn=lambda _: None)._post_with_retry(
+                'telegram', 'https://api.telegram.org/botSECRET/sendMessage',
+                {'routing_key': 'SECRET', 'nested': {'api_token': 'SECRET'}}, 'fp-400')
+
+        calls_503 = {'count': 0}
+        def post_503_then_200(*args, **kwargs):
+            calls_503['count'] += 1
+            return FakeResponse(503 if calls_503['count'] == 1 else 200,
+                                {'Retry-After': '0'})
+        recovered = MultiChannelAlertDispatcher(
+            event_db_path=retry_db, max_retries=3, timeout=1,
+            http_post=post_503_then_200, sleep_fn=lambda _: None)._post_with_retry(
+                'slack', 'https://hooks.slack.invalid/SECRET', {'hello': 'world'}, 'fp-503')
+
+        calls_network = {'count': 0}
+        def failing_post(*args, **kwargs):
+            calls_network['count'] += 1
+            raise requests.exceptions.ConnectionError('URL contained SECRET')
+        network = MultiChannelAlertDispatcher(
+            event_db_path=retry_db, max_retries=3, timeout=1,
+            http_post=failing_post, sleep_fn=lambda _: None)._post_with_retry(
+                'discord', 'https://discord.invalid/SECRET', {'hello': 'world'}, 'fp-network')
+
+        with sqlite3.connect(retry_db) as retry_connection:
+            dead_rows = retry_connection.execute(
+                'SELECT target_url,payload_json,error FROM dead_letter_alerts').fetchall()
+        audit_blob = json.dumps(dead_rows)
+        results['14_alert_retry_and_dead_letter'] = (
+            calls_400['count'] == 1 and permanent.get('retryable') is False
+            and calls_503['count'] == 2 and recovered.get('sent') is True
+            and calls_network['count'] == 3 and network.get('dead_lettered') is True
+            and 'SECRET' not in audit_blob)
+
+        # v5.2 immutable archive, nearest-observation matching, split conformal.
+        verification_store = TelemetryStore(os.path.join(td, 'verification.db'))
+        base_time = now.replace(minute=0, second=0, microsecond=0) - timedelta(hours=50)
+        dst_rows = []
+        for index in range(40):
+            issued = base_time + timedelta(hours=index)
+            target = issued + timedelta(hours=1, minutes=10)
+            observed = -30.0 - float(index % 6)
+            verification_store.save_nowcast_result({
+                'available': True, 'generated_at': issued.isoformat(),
+                'model_type': 'test-model', 'model_version': VERSION,
+                'inputs': {'dst_nt': observed + 10.0, 'kp': 3.0},
+                'predictions': {'1h': {
+                    'horizon_hours': 1, 'target_time_utc': target.isoformat(),
+                    'dst_nt': observed + 2.0,
+                    'dst_screening_lower_nt': observed - 6.0,
+                    'dst_screening_upper_nt': observed + 10.0,
+                    'screening_half_width_nt': 8.0, 'kp': 4.0,
+                    'uncertainty_label': 'uncalibrated_screening',
+                }},
+            })
+            dst_rows.append({'time_tag': (target + timedelta(minutes=5)).isoformat(),
+                             'dst': observed})
+        verification_store.save_dst(dst_rows)
+        verification_store.save_solar_wind(one + peer + divergent)
+        verification = ForecastVerifier(verification_store).summarize(
+            window_days=30, reference_time=now)
+        h1 = verification['horizons']['1h']
+        with verification_store._get_connection() as connection:
+            archived = connection.execute(
+                'SELECT COUNT(*) FROM ts_nowcast_archive').fetchone()[0]
+        results['20_immutable_forecast_archive_and_split_conformal'] = (
+            archived == 40 and h1['archive_sample_count'] == 40
+            and h1['calibration_sample_count'] == 28
+            and h1['evaluation_sample_count'] == 11
+            and h1['calibration_status'] == 'experimental_split_conformal_90pct'
+            and abs(h1['conformal_p90_half_width_nt'] - 2.0) < 1e-9
+            and abs(h1['mae_nt'] - 2.0) < 1e-9
+            and h1['skill_score'] is not None and h1['skill_score'] > 0.7)
+
+        consensus = L1FleetValidator.reconcile_l1_consensus(
+            store, 30, reference_time=now)
+        results['21_l1_consensus_diagnostics'] = (
+            consensus.get('available') is True
+            and consensus.get('consensus_status') == 'RECONCILED_DIVERGENCE'
+            and len(consensus.get('sources_used', {}).get('speed_kms', [])) == 2
+            and consensus.get('spread', {}).get('speed_kms_mad') is not None)
+
+        class RateLimitedResponse:
+            def __init__(self, status_code):
+                self.status_code = status_code
+                self.headers = {'Retry-After': '0'}
+                self.text = '{}' if status_code == 200 else ''
+            def raise_for_status(self):
+                if self.status_code >= 400:
+                    raise requests.exceptions.HTTPError(response=self)
+            def json(self):
+                return {}
+        retry_calls = {'post': 0, 'sleep': 0}
+        api_retry = SpaceWeatherAPI(sleep_fn=lambda _: retry_calls.__setitem__(
+            'sleep', retry_calls['sleep'] + 1))
+        def rate_limited_get(*args, **kwargs):
+            retry_calls['post'] += 1
+            return RateLimitedResponse(429 if retry_calls['post'] == 1 else 200)
+        api_retry.session.get = rate_limited_get
+        retry_value = api_retry._get('https://example.invalid/data', retries=1)
+        results['22_spaceweatherapi_429_retry_injection'] = (
+            retry_value == {} and retry_calls == {'post': 2, 'sleep': 1})
+
+        dedupe_store = TelemetryStore(os.path.join(td, 'dedupe.db'))
+        observation = now.replace(minute=0, second=0, microsecond=0) - timedelta(hours=2)
+        dedupe_store.save_dst([{'time_tag': observation.isoformat(), 'dst': -42.0}])
+        for minute in range(0, 60, 5):
+            target = observation + timedelta(minutes=(minute - 30) / 6.0)
+            issued = target - timedelta(hours=1)
+            dedupe_store.save_nowcast_result({
+                'available': True, 'generated_at': issued.isoformat(),
+                'model_type': 'dedupe-test', 'model_version': VERSION,
+                'inputs': {'dst_nt': -30.0, 'kp': 3.0},
+                'predictions': {'1h': {
+                    'horizon_hours': 1, 'target_time_utc': target.isoformat(),
+                    'dst_nt': -40.0, 'dst_screening_lower_nt': -50.0,
+                    'dst_screening_upper_nt': -30.0,
+                    'screening_half_width_nt': 10.0, 'kp': 4.0}}})
+        deduped = dedupe_store.get_verified_nowcast_pairs(
+            observation - timedelta(hours=1), observation + timedelta(hours=1), 1)
+        all_matches = dedupe_store.get_verified_nowcast_pairs(
+            observation - timedelta(hours=1), observation + timedelta(hours=1), 1,
+            deduplicate_observation=False)
+        results['23_subhour_verification_deduplication'] = (
+            len(all_matches) == 12 and len(deduped) == 1
+            and deduped[0]['observation_time'] == dedupe_store._stamp(observation))
+
+        last_calibration = parse_swpc_time(h1['last_calibration_observation_time'])
+        strict_pairs = verification_store.get_verified_nowcast_pairs(
+            base_time, now, 1)
+        raw_split = int(len(strict_pairs) * 0.7)
+        prospective = [row for row in strict_pairs[raw_split:]
+                       if parse_swpc_time(row['issued_at']) > last_calibration]
+        annotated = GeomagneticNowcaster(empty).predict(
+            verification_summary={'horizons': {'1h': h1}})
+        metadata_ok = annotated.get('available') is False
+        results['24_strict_temporal_split_and_conformal_metadata'] = (
+            h1['evaluation_sample_count'] == len(prospective)
+            and all(parse_swpc_time(row['issued_at']) > last_calibration
+                    for row in prospective)
+            and h1['sample_count'] == 40
+            and h1['calibration_status'] == 'experimental_split_conformal_90pct'
+            and metadata_ok)
+
+        results['25_v53_roc_guards_and_reliability'] = (
+            ForecastVerifier._compute_roc_auc([
+                {'obs_dst_nt': -10.0, 'pred_dst_nt': -12.0}
+                for _ in range(10)])['roc_status'] == 'no_positive_events_in_window'
+            and len(ForecastVerifier._compute_reliability(
+                [{'obs_dst_nt': -20.0-i, 'pred_dst_nt': -18.0-i} for i in range(30)],
+                [{'obs_dst_nt': -30.0-i, 'pred_dst_nt': -28.0-i} for i in range(8)]
+            ).get('curve', [])) == 6)
+
+        north = [SolarWindData(now, 450., 5., 1e5, 10., 10., bx=1., by=0.)]
+        south = [SolarWindData(now, 450., 5., 1e5, -10., 10., bx=1., by=0.)]
+        north_c = MagnetosphereCoupling.compute_metrics(north, 4.0)
+        south_c = MagnetosphereCoupling.compute_metrics(south, 4.0)
+        degenerate = ShockAnalyzer.magnetic_coplanarity((1.,0.,0.), (2.,0.,0.))
+        results['26_v53_coupling_sign_and_shock_guard'] = (
+            south_c['polar_cap_potential_kv'] > north_c['polar_cap_potential_kv']
+            and south_c['akasofu_epsilon_gw'] > north_c['akasofu_epsilon_gw']
+            and degenerate['normal_status'] == 'degenerate'
+            and degenerate['theta_bn_deg'] is None)
+
+        sensitivity = NowcastEnsemble.run({
+            'available': True,
+            'inputs': {'speed_kms': 450., 'pdyn_npa': 2., 'bz_nt': -5.,
+                       'by_nt': 3., 'dst_nt': -20.},
+            'predictions': {},
+        }, {'spread': {'speed_kms_mad': 50., 'bz_nt_mad': 4.}})
+        results['27_v53_input_sensitivity_separate'] = (
+            sensitivity.get('member_count') == 7
+            and sensitivity.get('method') == 'deterministic_input_sensitivity'
+            and 'hybrid_half_width_nt' not in json.dumps(sensitivity)
+            and sensitivity['perturbation_scales']['speed_kms'] >= 50.0)
+
+        external_store = TelemetryStore(os.path.join(td, 'external.db'))
+        target = now + timedelta(hours=3)
+        external_store.save_external_kp_forecast([
+            {'time_tag': target.isoformat(), 'kp': 5.0, 'observed': 'predicted'}
+        ], issued_at=now)
+        external_store.save_external_kp_forecast([
+            {'time_tag': target.isoformat(), 'kp': 5.0, 'observed': 'predicted'}
+        ], issued_at=now)
+        with external_store._get_connection() as connection:
+            external_count = connection.execute(
+                'SELECT COUNT(*) FROM ts_external_forecasts').fetchone()[0]
+            external_row = dict(connection.execute(
+                'SELECT provider,product,forecast_kp FROM ts_external_forecasts').fetchone())
+        results['28_v53_external_kp_archive_immutable'] = (
+            external_count == 1
+            and external_row == {'provider': 'NOAA_SWPC', 'product': 'kp_3h',
+                                 'forecast_kp': 5.0})
+
+        kp3=TelemetryStore(os.path.join(td,'kp_three_way.db'))
+        bin0=now.replace(hour=(now.hour//3)*3,minute=0,second=0,microsecond=0)-timedelta(hours=15)
+        observed_rows=[]
+        for i in range(6):
+            target=bin0+timedelta(hours=3*i); issued=target-timedelta(hours=2)
+            observed=2.0+i*(2.0/3.0); prior=max(0.0,observed-2.0/3.0)
+            observed_rows.append({'time_tag':target.isoformat(),'kp':observed,'observed':'observed'})
+            observed_rows.append({'time_tag':(issued-timedelta(minutes=5)).isoformat(),'kp':prior,'observed':'observed'})
+            kp3.save_nowcast_result({'available':True,'generated_at':issued.isoformat(),
+                'model_type':'kp-test','model_version':VERSION,'inputs':{'dst_nt':-10,'kp':prior},
+                'predictions':{'2h':{'horizon_hours':2,'target_time_utc':(target+timedelta(minutes=30)).isoformat(),
+                'dst_nt':-10,'kp':observed+.1}}})
+            kp3.save_external_kp_forecast([{'time_tag':target.isoformat(),'kp':observed+.3,'observed':'predicted'}],issued_at=issued-timedelta(minutes=10))
+        kp3.save_kp(observed_rows)
+        aligned=kp3.get_aligned_kp_verification_rows(bin0,bin0+timedelta(hours=18))
+        summary3=ForecastVerifier(kp3).summarize_kp_three_way(30,reference_time=bin0+timedelta(hours=18))
+        results['29_kp_three_way_aligned_intervals']=(len(aligned)==6 and summary3['common_target_count']==6
+            and summary3['methods']['smc']['mae'] < summary3['methods']['noaa_swpc']['mae']
+            and all(parse_swpc_time(r['noaa_issued_at']) <= parse_swpc_time(r['smc_issued_at']) for r in aligned)
+            and all(parse_swpc_time(r['persistence_observation_time']) <= parse_swpc_time(r['smc_issued_at']) for r in aligned))
+
+        serialized=json_safe_value({'when':now,'bad':float('nan'),'items':(1,2,3)})
+        results['30_json_serializer_independent']=(serialized['bad'] is None and serialized['items']==[1,2,3] and 'ReportSnapshot' not in inspect.getsource(TelemetryStore.save_nowcast_result))
+        results['31_cli_option_detection_forms']=(cli_has_option(['--hours-back','24'],'--hours-back') and cli_has_option(['--hours-back=24'],'--hours-back') and not cli_has_option(['quick'],'--hours-back'))
+        results['32_finite_number_helper']=(not is_finite_number(None) and not is_finite_number('bad') and not is_finite_number(float('nan')) and is_finite_number(-4.5) and is_finite_number('3.2'))
+        app_state=SolarMissionControl(output_dir=os.path.join(td,'app_state'),with_plots=False,with_images=False,write_html=False,write_json=False)
+        owner_snap=app_state.report_generator.build_snapshot('ownership-test')
+        app_state.snapshot=owner_snap
+        results['33_snapshot_single_owner_provider']=(app_state.report_generator.snapshot is app_state.snapshot and 'snapshot' not in app_state.report_generator.__dict__)
+        results['34_alert_state_initialized']=(hasattr(app_state,'last_alert_result') and app_state.last_alert_result is None)
+        cop_nan=ShockAnalyzer.magnetic_coplanarity((float('nan'),0.,-5.),(float('nan'),0.,-8.))
+        results['35_coplanarity_nan_guard']=(cop_nan['normal_status']=='degenerate' and cop_nan['theta_bn_deg'] is None and cop_nan['normal_vector'] is None)
+        snap_b=app_state.report_generator.build_snapshot('second-run-id')
+        fp_a=_alert_fingerprint(alert_payload(app_state, owner_snap.run_id, owner_snap))
+        fp_b=_alert_fingerprint(alert_payload(app_state, snap_b.run_id, snap_b))
+        results['36_alert_fingerprint_run_id_short_excluded']=(fp_a == fp_b)
+        loaded_nullable=nullable_store.get_solar_wind_range(now-timedelta(minutes=30),now+timedelta(minutes=1))
+        ssc_nullable=GeomagneticNowcaster.detect_ssc_and_imf_turning(loaded_nullable)
+        esc_nullable=MultiChannelAlertDispatcher.evaluate_escalation_rules(loaded_nullable,[],10,'NOMINAL')
+        results['37_nullable_sqlite_ssc_and_escalation']=(isinstance(ssc_nullable,dict) and isinstance(esc_nullable,dict))
+
+        donki_api = SpaceWeatherAPI()
+        fake_donki_payloads = {
+            ENDPOINTS['donki_ips']: [{
+                'activityID': '2026-10-15T08:00:00-IPS-001',
+                'eventTime': now.isoformat(),
+                'location': 'Earth',
+                'catalog': 'M2M_CATALOG',
+                'instruments': [{'displayName': 'DSCOVR: PLASMAG'}],
+                'linkedEvents': [{'activityID': '2026-10-13T12:00:00-CME-001'}],
+            }],
+            ENDPOINTS['donki_sep']: [{
+                'sepID': '2026-10-15T09:00:00-SEP-001',
+                'eventTime': now.isoformat(),
+                'instruments': [{'displayName': 'GOES-18: SEISS'}],
+            }],
+            ENDPOINTS['donki_hss']: [{
+                'hssID': '2026-10-15T06:00:00-HSS-001',
+                'eventTime': now.isoformat(),
+                'instruments': [{'displayName': 'ACE: SWEPAM'}],
+            }],
+            ENDPOINTS['donki_wsa_enlil']: [{
+                'simulationID': 'WSA-ENLIL/2026-10-15-001',
+                'modelCompletionTime': now.isoformat(),
+                'au': 2.0,
+                'estimatedShockArrivalTime': (now + timedelta(hours=18)).isoformat(),
+                'estimatedDuration': 12.5,
+                'rmin_re': 7.2,
+                'kp_90': 6,
+                'isEarthGB': True,
+                'cmeInputs': [{'cmeid': 'CME-1', 'cmeStartTime': (now - timedelta(hours=24)).isoformat(), 'speed': 950.0}],
+                'impactList': [{'location': 'STEREO A', 'arrivalTime': (now + timedelta(hours=14)).isoformat(), 'isGlancingBlow': False}],
+            }],
+            ENDPOINTS['donki_notifications']: [
+                {
+                    'messageType': 'FLR',
+                    'messageID': '20261015-AL-001',
+                    'messageIssueTime': now.isoformat(),
+                    'messageURL': 'https://kauai.ccmc.gsfc.nasa.gov/DONKI/view/Alert/1',
+                    'messageBody': 'Space Weather Message Code: ALTEF3',
+                },
+                {
+                    'messageType': 'FLR',
+                    'messageID': '20261015-AL-001-DUP',
+                    'messageIssueTime': now.isoformat(),
+                    'messageURL': 'https://kauai.ccmc.gsfc.nasa.gov/DONKI/view/Alert/1',
+                    'messageBody': 'Space Weather Message Code: ALTEF3',
+                },
+            ],
+            ENDPOINTS['donki_mpc']: [{'mpcID': '2026-10-15T10:00:00-MPC-001', 'eventTime': now.isoformat()}],
+            ENDPOINTS['donki_rbe']: [{'rbeID': '2026-10-15T11:00:00-RBE-001', 'eventTime': now.isoformat()}],
+            ENDPOINTS['donki_cme_analysis']: [{'time21_5': now.isoformat(), 'speed': 980.0, 'type': 'C', 'isMostAccurate': True, 'catalog': 'M2M_CATALOG'}],
+        }
+        donki_api._get = lambda url, params=None, cache_minutes=5, retries=3: fake_donki_payloads.get(url, [])
+        ips_list = donki_api.get_donki_ips(now - timedelta(days=2), now)
+        sep_list = donki_api.get_donki_sep(now - timedelta(days=2), now)
+        hss_list = donki_api.get_donki_hss(now - timedelta(days=2), now)
+        enlil_list = donki_api.get_donki_wsa_enlil(now - timedelta(days=2), now)
+        note_list = donki_api.get_donki_notifications(now - timedelta(days=2), now)
+        mpc_list = donki_api.get_donki_mpc(now - timedelta(days=2), now)
+        rbe_list = donki_api.get_donki_rbe(now - timedelta(days=2), now)
+        cme_an_list = donki_api.get_donki_cme_analyses(now - timedelta(days=2), now)
+        store.save_donki_events('IPS', ips_list)
+        store.save_donki_events('SEP', sep_list)
+        store.save_donki_events('HSS', hss_list)
+        store.save_donki_events('WSA_ENLIL', enlil_list)
+        store.save_donki_events('MPC', mpc_list)
+        store.save_donki_events('RBE', rbe_list)
+        store.save_donki_events('CME_ANALYSIS', cme_an_list)
+        store.save_donki_notifications(note_list)
+        stored_events = store.get_donki_events_range(now - timedelta(days=1), now + timedelta(days=1))
+        stored_notes_meta = store.get_donki_notifications_range(now - timedelta(days=1), now + timedelta(days=1), include_body=False)
+        stored_notes_full = store.get_donki_notifications_range(now - timedelta(days=1), now + timedelta(days=1), include_body=True)
+        degraded_quality = DataQuality(
+            source='NASA DONKI', completeness=85.0, freshness=100.0,
+            reliability=85.0, record_count=7, data_gaps=0,
+            flags=['DEGRADED: 7 recent event record(s)', 'Partial endpoint warnings: GST: HTTP 503'],
+        )
+        cda_dt_series = SpaceWeatherVisualizer._psp_series_to_arrays({
+            'times': [now - timedelta(minutes=5), now],
+            'values': [[1.0, 2.0, 3.0], [2.0, 3.0, 4.0]],
+            'kind': 'vector3',
+        }, expected_start=now - timedelta(hours=1), expected_end=now + timedelta(hours=1))
+        results['38_donki_extended_endpoints_and_storage'] = (
+            ENDPOINTS.get('donki_wsa_enlil') == 'https://ccmc.gsfc.nasa.gov/DONKI-API/get/WSAEnlilSimulations'
+            and len(ips_list) == 1 and len(sep_list) == 1 and len(hss_list) == 1
+            and len(enlil_list) == 1 and len(mpc_list) == 1 and len(rbe_list) == 1
+            and len(cme_an_list) == 1 and len(note_list) == 1
+            and len(stored_events) == 7
+            and len(stored_notes_meta) == 1 and 'message_body' not in stored_notes_meta[0]
+            and len(stored_notes_full) == 1 and stored_notes_full[0].get('message_body') == 'Space Weather Message Code: ALTEF3'
+            and degraded_quality.status == 'Degraded'
+            and cda_dt_series is not None and len(cda_dt_series[0]) == 2
+        )
+
+        root = Path(td)
+        output = root / 'out'
+        sibling = root / 'outside'
+        output.mkdir(); sibling.mkdir()
+        (output / 'space_weather_report.html').write_text('<html>SMC</html>', encoding='utf-8')
+        (output / 'report_snapshot.json').write_text(json.dumps(snap.to_dict()), encoding='utf-8')
+        (sibling / 'secret.txt').write_text('TOP_SECRET', encoding='utf-8')
+
+        class FakeAggregator:
+            def __init__(self):
+                self.store = empty
+                self.nowcast_result = {}
+                self.l1_validation = {}
+                self.verification_summary = verification
+                self.l1_consensus = consensus
+                self.data_quality = {}
+                self.solar_wind_data = []
+                self.kp_data = []
+                self.cmes = []
+                self.last_update = None
+            def get_current_conditions(self): return conditions
+        class FakeReportGenerator:
+            run_id = 'test-run'
+            def _risk_inputs(self): return ({}, snap.risk)
+        class FakeApp:
+            output_dir = str(output)
+            aggregator = FakeAggregator()
+            report_generator = FakeReportGenerator()
+            snapshot = snap
+        app = FakeApp()
+
+        async def integration_tests():
+            srv = MissionControlHTTPServer(app, host='127.0.0.1', port=0, api_token='', cors_origin='')
+            srv._server = await asyncio.start_server(srv._handle_client, '127.0.0.1', 0)
+            port = srv._server.sockets[0].getsockname()[1]
+            async def request(path, read_all=True, headers=None):
+                reader, writer = await asyncio.open_connection('127.0.0.1', port)
+                extra = ''.join(f'{key}: {value}\r\n' for key, value in (headers or {}).items())
+                writer.write(f'GET {path} HTTP/1.1\r\nHost: localhost\r\n{extra}\r\n'.encode())
+                await writer.drain()
+                data = await asyncio.wait_for(reader.read() if read_all else reader.read(4096), 5.0)
+                writer.close(); await writer.wait_closed()
+                return data
+            try:
+                snap_r = await request('/api/snapshot')
+                now_r = await request('/api/nowcast')
+                tel_r = await request('/api/telemetry?range=1h')
+                resp_health = await request('/health')
+                resp_ready = await request('/ready')
+                resp_metrics = await request('/metrics')
+                resp_alerts = await request('/api/alerts/history?limit=10')
+                resp_verification = await request('/api/verification/summary?days=30')
+                resp_history = await request('/api/verification/history?horizon=1h')
+                resp_consensus = await request('/api/l1/consensus')
+                results['15_observability_http_routes'] = (
+                    all(b'HTTP/1.1 200 OK' in r for r in (
+                        snap_r, now_r, tel_r, resp_health, resp_metrics, resp_alerts,
+                        resp_verification, resp_history, resp_consensus))
+                    and b'smc_risk_score' in resp_metrics and b'"status": "healthy"' in resp_health
+                    and (b'200 OK' in resp_ready or b'503 Service Unavailable' in resp_ready))
+                results['16_security_headers'] = all(h in snap_r for h in (
+                    b'X-Content-Type-Options: nosniff', b'X-Frame-Options: DENY', b'Referrer-Policy: no-referrer'))
+                sse = await request('/events', read_all=False)
+                results['17_sse_connect_disconnect'] = b'text/event-stream' in sse and b'event: telemetry_tick' in sse
+                await srv.emit_state_changes()
+                await srv.emit_event('replay_probe_one', {'order': 1})
+                first_id = srv._event_sequence
+                await srv.emit_event('replay_probe_two', {'order': 2})
+                replay = await request('/events', read_all=False,
+                                       headers={'Last-Event-ID': str(first_id)})
+                named = [name for _, name, _ in srv._event_history]
+                results['18_named_sse_events_and_replay_buffer'] = (
+                    'risk_update' in named and 'l1_divergence' in named
+                    and len(srv._event_history) <= 100
+                    and b'event: replay_probe_two' in replay
+                    and b'event: replay_probe_one' not in replay)
+                traversal = await request('/../outside/secret.txt')
+                encoded = await request('/%2e%2e/outside/secret.txt')
+                results['19_real_path_traversal_blocked'] = all(
+                    b'404 Not Found' in r and b'TOP_SECRET' not in r for r in (traversal, encoded))
+                resp_ver_dash = await request('/api/verification/dashboard')
+                results['21_l1_consensus_diagnostics'] = (
+                    results['21_l1_consensus_diagnostics']
+                    and b'HTTP/1.1 200 OK' in resp_consensus
+                    and b'HTTP/1.1 200 OK' in resp_verification
+                    and b'HTTP/1.1 200 OK' in resp_history)
+                (output / 'solar_telemetry.db').write_bytes(b'SQLite format 3\x00')
+                db_probe = await request('/solar_telemetry.db')
+                results['39_v551_ensemble_cme_psp_and_dashboard_fixes'] = (
+                    b'HTTP/1.1 200 OK' in resp_ver_dash
+                    and b'Solar Mission Control Verification' in resp_ver_dash
+                    and b'HTTP/1.1 200 OK' in now_r
+                )
+            finally:
+                await srv.stop()
+
+            # Test 40: v5.5.2 HTTP security hardening (non-loopback guard, bearer auth,
+            # static snapshot/db protection, wildcard CORS rejection, explicit CORS origin)
+            non_loopback_blocked = False
+            bad_srv = MissionControlHTTPServer(app, host='0.0.0.0', port=0, api_token='')
+            try:
+                await bad_srv.start()
+            except RuntimeError:
+                non_loopback_blocked = True
+            finally:
+                await bad_srv.stop()
+
+            wildcard_srv = MissionControlHTTPServer(
+                app, host='127.0.0.1', port=0, api_token='sec-token-552', cors_origin='*')
+            wildcard_rejected = (wildcard_srv.cors_origin == '')
+
+            auth_srv = MissionControlHTTPServer(
+                app, host='127.0.0.1', port=0,
+                api_token='sec-token-552', cors_origin='https://ops.example.org')
+            auth_srv._server = await asyncio.start_server(auth_srv._handle_client, '127.0.0.1', 0)
+            auth_port = auth_srv._server.sockets[0].getsockname()[1]
+            async def auth_request(path, read_all=True, headers=None):
+                reader, writer = await asyncio.open_connection('127.0.0.1', auth_port)
+                extra = ''.join(f'{key}: {value}\r\n' for key, value in (headers or {}).items())
+                writer.write(f'GET {path} HTTP/1.1\r\nHost: localhost\r\n{extra}\r\n'.encode())
+                await writer.drain()
+                data = await asyncio.wait_for(reader.read() if read_all else reader.read(4096), 5.0)
+                writer.close(); await writer.wait_closed()
+                return data
+            try:
+                unauth_snap = await auth_request('/api/snapshot')
+                unauth_static_snap = await auth_request('/report_snapshot.json')
+                wrong_tok = await auth_request('/api/snapshot', headers={'Authorization': 'Bearer wrong'})
+                valid_tok = await auth_request('/api/snapshot', headers={'Authorization': 'Bearer sec-token-552'})
+                query_tok_sse = await auth_request('/events?token=sec-token-552', read_all=False)
+                public_health = await auth_request('/health')
+                html_root = await auth_request('/')
+                results['40_v552_http_security_hardening'] = (
+                    non_loopback_blocked
+                    and wildcard_rejected
+                    and b'404 Not Found' in db_probe
+                    and b'SQLite format 3' not in db_probe
+                    and b'HTTP/1.1 401 Unauthorized' in unauth_snap
+                    and b'WWW-Authenticate: Bearer' in unauth_snap
+                    and b'HTTP/1.1 401 Unauthorized' in unauth_static_snap
+                    and b'HTTP/1.1 401 Unauthorized' in wrong_tok
+                    and b'HTTP/1.1 200 OK' in valid_tok
+                    and b'Access-Control-Allow-Origin: https://ops.example.org' in valid_tok
+                    and b'Vary: Origin' in valid_tok
+                    and b'Cache-Control: no-store' in valid_tok
+                    and b'Content-Security-Policy:' in valid_tok
+                    and b'https://cdn.jsdelivr.net' in valid_tok
+                    and b'HTTP/1.1 200 OK' in query_tok_sse
+                    and b'Access-Control-Allow-Origin: https://ops.example.org' in query_tok_sse
+                    and b'HTTP/1.1 200 OK' in public_health
+                    and b'HTTP/1.1 200 OK' in html_root
+                    and b'X-Frame-Options: SAMEORIGIN' in html_root
+                )
+            finally:
+                await auth_srv.stop()
+        asyncio.run(integration_tests())
+
+        # Verify OperationalNowcastEnsemble(verification_store).predict(verification_summary=...)
+        ens_out = OperationalNowcastEnsemble(verification_store).predict(
+            lookback_days=14, verification_summary=verification)
+        ens_pred_1h = (ens_out.get('predictions') or {}).get('1h') or {}
+        skill_mon = ens_out.get('skill_monitor') or {}
+        # Verify drag-modeled CME without estimated_arrival gets speed_uncertainty_distribution
+        drag_cme = CME(
+            start_time=now - timedelta(hours=12), speed=1000.0,
+            half_angle=35.0, latitude=5.0, longitude=-10.0,
+            is_earth_directed=True, estimated_arrival=None, source='DONKI',
+        )
+        cme_win = app_state.aggregator.estimate_cme_arrival_window(drag_cme)
+        cme_dist = (cme_win or {}).get('speed_uncertainty_distribution') or {}
+        # Verify PSP EPI-Hi datatype candidates & newest-date discovery timeout/single-datatype handling
+        epihi_candidates = PSP_PRODUCTS['isois_epihi']['datatype_candidates']
+        probe_calls = []
+        def fake_psp_loader(trange=None, datatype=None, level=None, **kwargs):
+            probe_calls.append(datatype)
+            raise TimeoutError('simulated CDF processing timeout')
+        app_state.aggregator.api._resolve_psp_loader = lambda name: fake_psp_loader
+        timeout_end = app_state.aggregator._discover_psp_latest_end(
+            'isois_epihi', 120, now, max_probes=4, probe_timeout=5)
+        # Verify partial-fill EPI-Hi variable selection
+        epihi_series, epihi_raw, epihi_fill = app_state.aggregator.api._extract_psp_valid_series({
+            'R1B_H_SECT_Flux': {'x': [now - timedelta(hours=2), now - timedelta(hours=1)],
+                                'y': [[-1.0e31, -1.0e31], [-1.0e31, -1.0e31]]},
+            'R1B_He_SECT_Flux': {'x': [now - timedelta(hours=2), now - timedelta(hours=1)],
+                                 'y': [[-1.0e31, -1.0e31], [-1.0e31, -1.0e31]]},
+            'LET1_H_Flux': {'x': [now - timedelta(hours=2), now - timedelta(hours=1)],
+                            'y': [[12.5, -1.0e31, 4.0], [15.0, -1.0e31, 5.0]]},
+        })
+        epihi_arrays = SpaceWeatherVisualizer._psp_series_to_arrays(
+            epihi_series['LET1_H_Flux'],
+            expected_start=now - timedelta(hours=6), expected_end=now)
+        # Verify STEREO fetch_image sends browser-compatible Accept & Referer headers
+        captured_headers = {}
+        class FakeImgResp:
+            status_code = 200
+            content = b'\xff\xd8\xff\xe0JFIF'
+            headers = {'Content-Type': 'image/jpeg'}
+            def raise_for_status(self): pass
+        orig_get = app_state.aggregator.api.session.get
+        def capture_img_get(url, headers=None, timeout=None):
+            captured_headers.update(headers or {})
+            return FakeImgResp()
+        app_state.aggregator.api.session.get = capture_img_get
+        try:
+            img_res = app_state.aggregator.api.fetch_image(ENDPOINTS['stereo_a_cor2_latest'])
+        finally:
+            app_state.aggregator.api.session.get = orig_get
+
+        results['39_v551_ensemble_cme_psp_and_dashboard_fixes'] = (
+            results.get('39_v551_ensemble_cme_psp_and_dashboard_fixes', False)
+            and ens_out.get('available') is True
+            and ens_out.get('ensemble') is True
+            and 'ensemble_mean_dst_nt' in ens_pred_1h
+            and 'ensemble_std_dst_nt' in ens_pred_1h
+            and 'ensemble_lower_68_nt' in ens_pred_1h
+            and 'ensemble_upper_68_nt' in ens_pred_1h
+            and ens_pred_1h.get('ensemble_member_count') == 3
+            and skill_mon.get('advisory_only') is True
+            and '1h' in (skill_mon.get('recommendations') or {})
+            and isinstance(cme_dist, dict)
+            and cme_dist.get('method') == 'speed_uncertainty'
+            and cme_dist.get('eta_5th_percentile') is not None
+            and cme_dist.get('eta_95th_percentile') is not None
+            and epihi_candidates == ['let1_rates1h', 'het_rates1h']
+            and probe_calls == ['let1_rates1h']
+            and abs((now - timeout_end).total_seconds() - 86400.0) < 5.0
+            and 'LET1_H_Flux' in epihi_series
+            and epihi_fill == 2
+            and epihi_arrays is not None and len(epihi_arrays[0]) == 2
+            and img_res is not None
+            and 'image/jpeg' in captured_headers.get('Accept', '')
+            and captured_headers.get('Referer') == 'https://stereo-ssc.nascom.nasa.gov/'
+        )
+
+    passed = sum(bool(v) for v in results.values())
+    return {'passed': passed, 'total': len(results), 'all_passed': passed == len(results), 'tests': results}
+
 def dependency_health() -> Dict[str, Any]:
     """Return dependency and runtime status without network access."""
     import importlib.util
     modules = ('numpy', 'matplotlib', 'PIL', 'astropy', 'sunpy',
-               'plotly', 'reportlab', 'requests', 'sqlite3')
+               'plotly', 'reportlab', 'requests', 'sqlite3', 'aiohttp', 'onnxruntime', 'cdasws')
     status = {}
     for name in modules:
         try:
@@ -6182,6 +12036,7 @@ def dependency_health() -> Dict[str, Any]:
         'pyspedas': importlib.util.find_spec('pyspedas') is not None,
         'timestamp': datetime.now(timezone.utc).isoformat(),
     }
+
 
 def initialize_run_database(output_dir: str) -> Tuple[sqlite3.Connection, str]:
     os.makedirs(output_dir, exist_ok=True)
@@ -6210,9 +12065,10 @@ def initialize_run_database(output_dir: str) -> Tuple[sqlite3.Connection, str]:
     connection.commit()
     return connection, run_id
 
+
 def cleanup_old_runs(connection: sqlite3.Connection, retention_days: int = 180) -> int:
     retention_days = max(1, int(retention_days))
-    cutoff = (datetime.now(timezone.utc)-timedelta(days=retention_days)).isoformat()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=retention_days)).isoformat()
     cursor = connection.execute(
         "DELETE FROM runs WHERE started_at < ? AND status != 'extreme_event'",
         (cutoff,))
@@ -6242,17 +12098,21 @@ def write_pdf_report(text_report: str, visualizer: Optional[SpaceWeatherVisualiz
         return None
     path = os.path.join(output_dir, 'solar_mission_control_report.pdf')
     styles = getSampleStyleSheet()
-    document = SimpleDocTemplate(path, pagesize=A4, leftMargin=1.25*cm,
-                                 rightMargin=1.25*cm, topMargin=1.2*cm,
-                                 bottomMargin=1.2*cm)
+    document = SimpleDocTemplate(path, pagesize=A4, leftMargin=1.25 * cm,
+                                 rightMargin=1.25 * cm, topMargin=1.2 * cm,
+                                 bottomMargin=1.2 * cm)
     try:
         body = Preformatted(text_report, styles['Code'], maxLineLength=105)
     except TypeError:
         body = Preformatted(text_report, styles['Code'])
 
     story = [Paragraph('Solar Mission Control', styles['Title']),
-             Paragraph(f'Version {VERSION}', styles['Normal']), Spacer(1, 12),
-             body]
+             Paragraph(f'Version {VERSION}', styles['Normal']),
+             Paragraph(f'Prepared by {AUTHOR_NAME}', styles['Normal']),
+             Paragraph(f'Contact: {AUTHOR_EMAIL}', styles['Normal']),
+             Paragraph(COPYRIGHT_NOTICE, styles['Normal']),
+             Paragraph(CODE_RIGHTS_NOTICE, styles['Normal']),
+             Spacer(1, 12), body]
     if visualizer:
         for item in visualizer.figures + visualizer.images:
             image_path = item.get('path')
@@ -6262,7 +12122,7 @@ def write_pdf_report(text_report: str, visualizer: Optional[SpaceWeatherVisualiz
                 story.extend([PageBreak(),
                               Paragraph(item.get('title', 'Plate'), styles['Heading2']),
                               Spacer(1, 8),
-                              PDFImage(image_path, width=17*cm, height=9.6*cm,
+                              PDFImage(image_path, width=17 * cm, height=9.6 * cm,
                                        kind='proportional'),
                               Spacer(1, 6),
                               Paragraph(item.get('caption', ''), styles['BodyText'])])
@@ -6273,6 +12133,7 @@ def write_pdf_report(text_report: str, visualizer: Optional[SpaceWeatherVisualiz
     document.build(story)
     print(f'  PDF report written: {path}')
     return path
+
 
 def write_interactive_timeline(aggregator: SpaceWeatherAggregator,
                                output_dir: str, hours_back: int = 72,
@@ -6304,12 +12165,17 @@ def write_interactive_timeline(aggregator: SpaceWeatherAggregator,
     print(f'  Interactive timeline written: {path}')
     return path
 
-def alert_payload(app: 'SolarMissionControl', run_id: str) -> Dict[str, Any]:
-    conditions, risk = app.report_generator._risk_inputs()
-    outlook = app.aggregator.get_forecast_outlook()
+
+def alert_payload(app: 'SolarMissionControl', run_id: str,
+                  snapshot: Optional[ReportSnapshot] = None) -> Dict[str, Any]:
+    current = snapshot or app.snapshot or app.report_generator.build_snapshot(run_id)
+    conditions = current.conditions
+    risk = current.risk
+    outlook = current.outlook
     return {
-        'version': VERSION, 'run_id': run_id,
-        'generated_at': datetime.now(timezone.utc).isoformat(),
+        'version': VERSION, 'run_id': current.run_id,
+        'run_id_short': current.run_id_short,
+        'generated_at': current.generated_at.isoformat(),
         'current_level': risk['level'], 'current_score': risk['overall_risk'],
         'forecast_level': outlook['level'], 'peak_forecast_kp': outlook['peak_kp'],
         'active_alerts': len(app.aggregator.alerts),
@@ -6321,8 +12187,8 @@ def alert_payload(app: 'SolarMissionControl', run_id: str) -> Dict[str, Any]:
 def _alert_fingerprint(payload: Dict[str, Any]) -> str:
     """Return one stable fingerprint for storage, logs, and webhook results."""
     stable = {key: value for key, value in payload.items()
-              if key not in {'run_id', 'generated_at'}}
-    encoded = json.dumps(stable, sort_keys=True, default=str).encode('utf-8')
+              if key not in {'run_id', 'run_id_short', 'generated_at'}}
+    encoded = json.dumps(json_safe_value(stable), sort_keys=True, allow_nan=False).encode('utf-8')
     return hashlib.sha256(encoded).hexdigest()
 
 
@@ -6382,6 +12248,7 @@ def is_duplicate_alert(payload: Dict[str, Any], cooldown_minutes: int = 60,
     """Backward-compatible, read-only duplicate check."""
     return alert_was_recently_sent(payload, cooldown_minutes, db_path)
 
+
 def send_webhook_alert(payload: Dict[str, Any], dry_run: bool = False) -> Dict[str, Any]:
     fingerprint = _alert_fingerprint(payload)
     if dry_run:
@@ -6399,6 +12266,7 @@ def send_webhook_alert(payload: Dict[str, Any], dry_run: bool = False) -> Dict[s
         return {'error': f'Webhook delivery failed: {type(exc).__name__}',
                 'fingerprint': fingerprint}
 
+
 # ============================================================================
 # MAIN APPLICATION
 # ============================================================================
@@ -6410,31 +12278,55 @@ class SolarMissionControl:
                  output_dir: str = "swrl_report",
                  with_plots: bool = True,
                  with_images: bool = True,
-                 write_html: bool = True):
-        self.aggregator = SpaceWeatherAggregator(nasa_api_key)
+                 write_html: bool = True,
+                 write_json: bool = True,
+                 risk_model: Optional[Dict[str, Any]] = None,
+                 output_width: int = DEFAULT_OUTPUT_WIDTH,
+                 output_height: int = DEFAULT_OUTPUT_HEIGHT,
+                 dpi: int = DEFAULT_OUTPUT_DPI):
+        self.aggregator = SpaceWeatherAggregator(nasa_api_key, output_dir)
         self.output_dir = output_dir
         self.with_plots = with_plots and HAS_MATPLOTLIB
         self.with_images = with_images
         self.write_html = write_html
+        self.write_json = write_json
+        self.output_width = int(output_width)
+        self.output_height = int(output_height)
+        self.dpi = int(dpi)
         self.visualizer: Optional[SpaceWeatherVisualizer] = None
-        self.report_generator = SpaceWeatherReportGenerator(self.aggregator)
+        self.snapshot: Optional[ReportSnapshot] = None
+        self.last_alert_result: Optional[Dict[str, Any]] = None
+        self.report_generator = SpaceWeatherReportGenerator(
+            self.aggregator, risk_model=risk_model, snapshot_provider=lambda: self.snapshot)
 
     def run(self, quick_check: bool = False, hours_back: int = 48, hours_forward: int = 48,
             interactive_enabled: bool = True, psp_product_keys: Optional[List[str]] = None,
             psp_days: int = 30, psp_wispr: bool = False, fetch_lyra: bool = False,
             psp_series_days: int = 2, psp_lag_days: int = 120,
-            wispr_days: Optional[int] = None, psp_timeout: int = 120):
+            wispr_days: Optional[int] = None, psp_timeout: int = 120,
+            run_id: Optional[str] = None, write_pdf: bool = False):
         """Run the space weather monitoring system"""
         print("\n" + "=" * 80)
         print("         SOLAR MISSION CONTROL - Space Weather Monitoring System")
         print("=" * 80 + "\n")
 
-        self.aggregator.fetch_all_data(hours_back=hours_back, hours_forward=hours_forward,
+        self.aggregator.fetch_all_data(
+            hours_back=hours_back, hours_forward=hours_forward,
             psp_product_keys=psp_product_keys, psp_days=psp_days, psp_wispr=psp_wispr,
             psp_output_dir=self.output_dir, fetch_lyra=fetch_lyra,
             include_images=self.with_images, psp_series_days=psp_series_days,
             psp_lag_days=psp_lag_days, wispr_days=wispr_days,
             psp_timeout=psp_timeout)
+
+        self.snapshot = None
+        self.report_generator.clear_snapshot()
+        self.snapshot = self.report_generator.build_snapshot(
+            run_id or self.report_generator.run_id)
+        if self.write_json:
+            try:
+                write_snapshot_json(self.snapshot, self.output_dir)
+            except Exception as exc:
+                print(f'  JSON snapshot skipped: {type(exc).__name__}: {exc}')
 
         print("\n" + "-" * 80 + "\n")
         print(self.report_generator.generate_quick_check())
@@ -6447,11 +12339,18 @@ class SolarMissionControl:
                 self.aggregator,
                 output_dir=self.output_dir,
                 include_images=self.with_images,
+                output_width=self.output_width,
+                output_height=self.output_height,
+                dpi=self.dpi,
                 hours_back=hours_back,
                 hours_forward=hours_forward
             )
             self.report_generator.visualizer = self.visualizer
             self.visualizer.build_all(risk, events)
+            plates = tuple(self.visualizer.build_plate_registry())
+            self.snapshot = replace(self.snapshot, plates=plates)
+            if self.write_json:
+                write_snapshot_json(self.snapshot, self.output_dir)
 
         if not quick_check:
             report_text = self.report_generator.generate_full_report()
@@ -6467,6 +12366,12 @@ class SolarMissionControl:
             except OSError as e:
                 print(f"  Could not write text report: {e}")
 
+            if write_pdf:
+                try:
+                    write_pdf_report(report_text, self.visualizer, self.output_dir)
+                except Exception as exc:
+                    print(f"  PDF skipped: {type(exc).__name__}: {exc}")
+
             interactive_available = False
             if self.visualizer and self.write_html and interactive_enabled:
                 interactive_available = bool(write_interactive_timeline(
@@ -6475,7 +12380,8 @@ class SolarMissionControl:
                 conditions, risk = self.report_generator._risk_inputs()
                 self.visualizer.build_html_report(
                     report_text, conditions, risk,
-                    interactive_available=interactive_available)
+                    interactive_available=interactive_available,
+                    snapshot=self.snapshot)
 
             if self.visualizer:
                 self.visualizer.display_inline()
@@ -6491,6 +12397,7 @@ class SolarMissionControl:
 def _bounded_int(name: str, minimum: int, maximum: Optional[int] = None):
     """Return an argparse converter with an explicit inclusive range."""
     import argparse
+
     def convert(raw: str) -> int:
         try:
             value = int(raw)
@@ -6500,18 +12407,21 @@ def _bounded_int(name: str, minimum: int, maximum: Optional[int] = None):
             limit = f'{minimum}..{maximum}' if maximum is not None else f'>={minimum}'
             raise argparse.ArgumentTypeError(f'{name} must be in range {limit}')
         return value
+
     return convert
 
 
 def main():
-    """Standalone v4.1.5 entry point for terminal, Colab, Docker, and services."""
+    """Standalone v5.0.0 entry point for terminal, Colab, Docker, and services."""
     import argparse
     parser = argparse.ArgumentParser(
         description=f'Solar Mission Control v{VERSION} - standalone',
         formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--version', action='version', version=f'%(prog)s {VERSION}')
+    parser.add_argument('--config', '-c', default='solar_mission_control.toml',
+                        help='TOML or JSON operational configuration file')
     parser.add_argument('command', nargs='?', default='run',
-                        choices=['run', 'quick', 'health', 'alert'])
+                        choices=['run', 'report', 'quick', 'health', 'alert', 'test'])
     parser.add_argument('--quick', '-q', action='store_true',
                         help='Lightweight core-data check; PSP catalogue products remain available only when explicitly selected')
     parser.add_argument('--hours-back', '-b', type=_bounded_int('hours-back', 1, 720), default=48)
@@ -6524,6 +12434,8 @@ def main():
     parser.add_argument('--no-plots', action='store_true')
     parser.add_argument('--no-images', action='store_true')
     parser.add_argument('--no-html', action='store_true')
+    parser.add_argument('--no-json', action='store_true', help='Disable schema-versioned JSON snapshot output')
+    parser.add_argument('--risk-config', help='JSON file overriding validated risk-model weights')
     parser.add_argument('--pdf', dest='pdf', action='store_true', default=None)
     parser.add_argument('--no-pdf', dest='pdf', action='store_false')
     parser.add_argument('--no-interactive', action='store_true')
@@ -6547,9 +12459,24 @@ def main():
     parser.add_argument('--psp-timeout', type=_bounded_int('psp-timeout', 1, 3600), default=None)
     parser.add_argument('--verbose-psp', action='store_true')
     parser.add_argument('--retention-days', type=_bounded_int('retention-days', 1, 36500), default=180)
+    parser.add_argument('--export-parquet', action='store_true',
+                        help='Export persistent telemetry tables to Parquet after each run')
     parser.add_argument('--dry-run', action='store_true')
     parser.add_argument('--alert-cooldown-minutes',
                         type=_bounded_int('alert-cooldown-minutes', 0, 525600), default=60)
+    # v5.0.0 CLI flags for Live Server & Multi-Channel Alerting
+    parser.add_argument('--serve', action='store_true',
+                        help='Start the embedded asyncio HTTP and SSE live server')
+    parser.add_argument('--host', default='127.0.0.1', help='Bind host for --serve (non-loopback requires SMC_API_TOKEN)')
+    parser.add_argument('--port', type=_bounded_int('port', 1, 65535), default=8080,
+                        help='Bind port for --serve')
+    parser.add_argument('--discord-webhook', default='', help='Discord webhook URL')
+    parser.add_argument('--slack-webhook', default='', help='Slack Incoming Webhook URL')
+    parser.add_argument('--telegram-token', default='', help='Telegram Bot token')
+    parser.add_argument('--telegram-chat-id', default='', help='Telegram Chat ID')
+    parser.add_argument('--pagerduty-key', default='', help='PagerDuty Events v2 routing key')
+    parser.add_argument('--escalate-only', action='store_true',
+                        help='Only dispatch webhooks when physical escalation thresholds trip')
 
     raw_argv = list(sys.argv[1:])
     clean_argv = []
@@ -6576,8 +12503,101 @@ def main():
     else:
         args = parser.parse_args(clean_argv)
 
+    try:
+        cfg = AppConfig.load(args.config if os.path.exists(args.config) else None)
+    except (OSError, ValueError, RuntimeError, json.JSONDecodeError) as exc:
+        parser.error(f'invalid --config: {exc}')
+
+    def _cli_has(*flags: str) -> bool:
+        return cli_has_option(clean_argv, *flags)
+
+    if not _cli_has('--hours-back', '-b'):
+        args.hours_back = int(cfg.general.hours_back)
+    if not _cli_has('--hours-forward', '-F'):
+        args.hours_forward = int(cfg.general.hours_forward)
+    if not _cli_has('--api-key', '-k'):
+        args.api_key = os.getenv('NASA_API_KEY', cfg.general.api_key).strip() or 'DEMO_KEY'
+    if not _cli_has('--loop', '-l'):
+        args.loop = int(cfg.general.loop_interval)
+    if not _cli_has('--output-dir', '-o'):
+        args.output_dir = str(cfg.general.output_dir)
+    if not _cli_has('--retention-days'):
+        args.retention_days = int(cfg.general.retention_days)
+    if not _cli_has('--export-parquet'):
+        args.export_parquet = bool(cfg.general.export_parquet)
+    if not _cli_has('--serve'):
+        args.serve = bool(cfg.general.serve_http)
+    if not _cli_has('--host'):
+        args.host = str(cfg.general.serve_host)
+    if not _cli_has('--port'):
+        args.port = int(cfg.general.serve_port)
+    if cfg.alerts.webhook_url and not os.getenv('SPACE_WEATHER_WEBHOOK'):
+        os.environ['SPACE_WEATHER_WEBHOOK'] = cfg.alerts.webhook_url.strip()
+    if not _cli_has('--discord-webhook') and cfg.alerts.discord_webhook_url:
+        args.discord_webhook = str(cfg.alerts.discord_webhook_url)
+    if not _cli_has('--slack-webhook') and cfg.alerts.slack_webhook_url:
+        args.slack_webhook = str(cfg.alerts.slack_webhook_url)
+    if not _cli_has('--telegram-token') and cfg.alerts.telegram_bot_token:
+        args.telegram_token = str(cfg.alerts.telegram_bot_token)
+    if not _cli_has('--telegram-chat-id') and cfg.alerts.telegram_chat_id:
+        args.telegram_chat_id = str(cfg.alerts.telegram_chat_id)
+    if not _cli_has('--pagerduty-key') and cfg.alerts.pagerduty_routing_key:
+        args.pagerduty_key = str(cfg.alerts.pagerduty_routing_key)
+    if not _cli_has('--escalate-only'):
+        args.escalate_only = bool(cfg.alerts.escalate_only)
+    if not _cli_has('--no-plots'):
+        args.no_plots = not bool(cfg.visuals.with_plots)
+    if not _cli_has('--no-images'):
+        args.no_images = not bool(cfg.visuals.with_images)
+    if not _cli_has('--no-html'):
+        args.no_html = not bool(cfg.visuals.write_html)
+    if not _cli_has('--no-json'):
+        args.no_json = not bool(cfg.visuals.write_json)
+    if not _cli_has('--pdf', '--no-pdf'):
+        args.pdf = bool(cfg.visuals.write_pdf)
+    if not _cli_has('--no-interactive'):
+        args.no_interactive = not bool(cfg.visuals.interactive)
+    if not _cli_has('--no-psp', '--with-psp', '--with-psp-fields', '--with-psp-sweap', '--with-psp-isois', '--with-psp-product'):
+        args.no_psp = not bool(cfg.science.enable_psp)
+        if cfg.science.psp_products:
+            args.psp_products = list(cfg.science.psp_products)
+            if not _cli_has('--with-psp-all'):
+                args.psp_all = False
+    if not _cli_has('--with-lyra', '--no-lyra'):
+        args.with_lyra = bool(cfg.science.enable_lyra)
+    if not _cli_has('--with-psp-wispr'):
+        args.with_psp_wispr = bool(cfg.science.enable_wispr)
+    if not _cli_has('--psp-days'):
+        args.psp_days = int(cfg.science.psp_days)
+    if not _cli_has('--psp-series-days'):
+        args.psp_series_days = int(cfg.science.psp_series_days)
+    if not _cli_has('--psp-lag-days'):
+        args.psp_lag_days = int(cfg.science.psp_lag_days)
+    if not _cli_has('--psp-timeout'):
+        args.psp_timeout = int(cfg.science.psp_timeout)
+    if not _cli_has('--wispr-days'):
+        args.wispr_days = cfg.science.wispr_days
+    if not _cli_has('--dry-run'):
+        args.dry_run = bool(cfg.alerts.dry_run)
+    if not _cli_has('--alert-cooldown-minutes'):
+        args.alert_cooldown_minutes = int(cfg.alerts.cooldown_minutes)
+
+    try:
+        risk_model = RiskAssessmentEngine.load_model(args.risk_config)
+    except (OSError, ValueError, json.JSONDecodeError) as exc:
+        parser.error(f'invalid --risk-config: {exc}')
+
+    if args.command == 'report':
+        args.command = 'run'
+
     if args.command == 'health':
         print(json.dumps(dependency_health(), indent=2))
+        return
+    if args.command == 'test':
+        test_report = run_v5_regression_suite()
+        print(json.dumps(test_report, indent=2))
+        if not test_report['all_passed']:
+            raise SystemExit(1)
         return
     if args.verbose_psp:
         logging.getLogger('pyspedas').setLevel(logging.INFO)
@@ -6594,9 +12614,9 @@ def main():
         parser.error('--psp-products-only requires an explicit PSP family, product, or WISPR')
 
     if args.psp_timeout is None:
-        args.psp_timeout = 45 if args.loop > 0 else 120
+        args.psp_timeout = 45 if (args.loop > 0 or args.serve) else 120
     if args.pdf is None:
-        args.pdf = args.loop <= 0 and not quick
+        args.pdf = (args.loop <= 0 and not args.serve) and not quick
 
     # Quick mode suppresses expensive products unless the user explicitly asks
     # for a specific PSP product. Imagery, LYRA, plots, HTML, PDF, and Plotly stay off.
@@ -6609,7 +12629,11 @@ def main():
     app = SolarMissionControl(
         nasa_api_key=args.api_key, output_dir=args.output_dir,
         with_plots=effective_plots, with_images=effective_images,
-        write_html=effective_html)
+        write_html=effective_html, write_json=not args.no_json,
+        risk_model=risk_model,
+        output_width=cfg.visuals.width,
+        output_height=cfg.visuals.height,
+        dpi=cfg.visuals.dpi)
 
     def psp_keys_from_args() -> List[str]:
         if args.no_psp:
@@ -6646,27 +12670,48 @@ def main():
             psp_wispr=use_wispr, fetch_lyra=effective_lyra,
             psp_series_days=args.psp_series_days,
             psp_lag_days=args.psp_lag_days,
-            wispr_days=args.wispr_days, psp_timeout=args.psp_timeout)
-        if args.pdf and not quick:
-            try:
-                text_path = os.path.join(args.output_dir, 'space_weather_report.txt')
-                with open(text_path, 'r', encoding='utf-8') as handle:
-                    write_pdf_report(handle.read(), app.visualizer, args.output_dir)
-            except Exception as exc:
-                print(f'  PDF skipped: {type(exc).__name__}: {exc}')
-        if args.command == 'alert':
-            payload = alert_payload(app, run_id)
+            wispr_days=args.wispr_days, psp_timeout=args.psp_timeout,
+            run_id=run_id, write_pdf=bool(args.pdf and not quick))
+        if args.export_parquet:
+            export_telemetry_to_parquet(
+                app.aggregator.store.db_path, args.output_dir)
+        if args.command == 'alert' or any((
+            os.getenv('SPACE_WEATHER_WEBHOOK', '').strip(),
+            args.discord_webhook, args.slack_webhook,
+            args.telegram_token, args.pagerduty_key
+        )):
+            payload = alert_payload(app, run_id, app.snapshot)
             alert_db = _alert_db_path(os.path.join(args.output_dir, 'alert_fingerprints.db'))
+            dispatcher = MultiChannelAlertDispatcher(
+                discord_webhook_url=args.discord_webhook,
+                slack_webhook_url=args.slack_webhook,
+                telegram_bot_token=args.telegram_token,
+                telegram_chat_id=args.telegram_chat_id,
+                pagerduty_routing_key=args.pagerduty_key,
+                dashboard_url=f"http://localhost:{args.port}/space_weather_report.html",
+                event_db_path=os.path.join(args.output_dir, 'alert_events.db'),
+                max_retries=3,
+            )
             if not args.dry_run and alert_was_recently_sent(
                     payload, args.alert_cooldown_minutes, alert_db):
                 result = {'skipped': 'duplicate alert within cooldown',
                           'cooldown_minutes': args.alert_cooldown_minutes,
                           'fingerprint': _alert_fingerprint(payload)}
             else:
-                result = send_webhook_alert(payload, args.dry_run)
+                result = dispatcher.dispatch_all(
+                    base_payload=payload,
+                    snapshot=app.snapshot,
+                    solar_wind=app.aggregator.solar_wind_data,
+                    cmes=app.aggregator.cmes,
+                    nowcast=app.aggregator.nowcast_result,
+                    l1_validation=app.aggregator.l1_validation,
+                    dry_run=args.dry_run,
+                    only_on_escalation=args.escalate_only,
+                )
                 if result.get('sent') is True:
                     record_alert_sent(payload, alert_db)
-            print(json.dumps(result, indent=2))
+            app.last_alert_result = result
+            print(json.dumps(result, indent=2, default=str))
         return classification
 
     def run_iteration() -> bool:
@@ -6692,20 +12737,72 @@ def main():
         finally:
             if connection is not None:
                 try:
-                    close_run_database(connection, run_id, status, warning)
-                except Exception as exc:
-                    logging.warning('Could not close run-history record: %s: %s',
-                                    type(exc).__name__, exc)
-                try:
-                    cleanup_connection = sqlite3.connect(
-                        os.path.join(args.output_dir, 'solar_mission_control.db'))
-                    try:
-                        cleanup_old_runs(cleanup_connection, args.retention_days)
-                    finally:
-                        cleanup_connection.close()
+                    connection.execute(
+                        'UPDATE runs SET ended_at=?, status=?, warning=? WHERE run_id=?',
+                        (datetime.now(timezone.utc).isoformat(), status, warning, run_id))
+                    connection.commit()
+                    cleanup_old_runs(connection, args.retention_days)
+                    telemetry_db = os.path.join(args.output_dir, 'solar_telemetry.db')
+                    if os.path.exists(telemetry_db):
+                        deleted_rows = TelemetryStore(telemetry_db).prune_older_than(
+                            args.retention_days)
+                        if deleted_rows:
+                            logging.info(
+                                'Pruned %d telemetry rows older than %d days',
+                                deleted_rows, args.retention_days)
                 except sqlite3.Error as exc:
-                    logging.warning('Run-history cleanup skipped: %s: %s',
+                    logging.warning('Could not finalize/clean run history: %s: %s',
                                     type(exc).__name__, exc)
+                finally:
+                    try:
+                        connection.close()
+                    except sqlite3.Error as exc:
+                        logging.warning('Could not close run-history database: %s: %s',
+                                        type(exc).__name__, exc)
+
+    if args.serve:
+        async def run_server_loop():
+            http_server = MissionControlHTTPServer(app, host=args.host, port=args.port)
+            await http_server.start()
+            interval_minutes = args.loop if args.loop > 0 else 10
+            loop = asyncio.get_running_loop()
+            failures = 0
+            try:
+                while True:
+                    started = time.monotonic()
+                    succeeded = await loop.run_in_executor(None, run_iteration)
+                    failures = 0 if succeeded else failures + 1
+                    await http_server.emit_event(
+                        'telemetry_tick', http_server._build_live_pulse()
+                    )
+                    if succeeded:
+                        await http_server.emit_state_changes()
+                    alert_result = getattr(app, 'last_alert_result', None)
+                    if alert_result:
+                        sent_channels = [name for name, outcome in
+                            (alert_result.get('channels') or {}).items()
+                            if outcome.get('sent')]
+                        for channel in sent_channels:
+                            http_server._alerts_sent_total[channel] += 1
+                        if sent_channels:
+                            await http_server.emit_event('alert_triggered', {
+                                'channels': sent_channels,
+                                'fingerprint': alert_result.get('fingerprint'),
+                                'escalation': alert_result.get('escalation', {}),
+                            })
+                        app.last_alert_result = None
+                    normal_delay = interval_minutes * 60
+                    failure_delay = min(900, 60 * (2 ** max(0, failures - 1))) if failures else 0
+                    elapsed = time.monotonic() - started
+                    await asyncio.sleep(max(5.0, normal_delay + failure_delay - elapsed))
+            finally:
+                await http_server.stop()
+
+        try:
+            asyncio.run(run_server_loop())
+        except KeyboardInterrupt:
+            print('\nLive server and monitoring stopped by user')
+        return
 
     if args.loop <= 0:
         if not run_iteration():

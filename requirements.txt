@@ -1,28 +1,34 @@
 # ============================================================================
-# Solar Mission Control v4.1.5 - complete requirements
-# Python >= 3.12 recommended; 3.10 minimum (PySPEDAS)
+# Solar Mission Control v5.5.2
+# Runtime dependencies for Python 3.12 Docker builds
 # ============================================================================
 
-# --- Core (script imports directly, no fallback) ---
-requests>=2.31.0
+# Core HTTP, asynchronous networking, and configuration
+requests>=2.32.0,<3.0.0
+aiohttp>=3.10.0,<4.0.0
+tomli>=2.0.1,<3.0.0; python_version < "3.11"
 
-# --- Numeric / scientific (guarded by HAS_* flags, but required for full run) ---
-numpy>=1.26.0,<2.0.0
-matplotlib>=3.8.0
-Pillow>=10.0.0
-astropy>=6.0.0
+# Numerical analysis and scientific computing
+numpy>=1.26.0,<3.0.0
+scipy>=1.14.0,<2.0.0
+pandas>=2.2.0,<3.0.0
 
-# --- Solar physics: Fido/VSO acquisition for AIA, HMI, LASCO, HEK ---
-# [net] pulls bs4, drms, zeep, pyvo, parfive, tqdm, python-dateutil
-# [map] pulls scipy, scikit-image
-sunpy[net,map]>=6.0.0
+# Plotting, imagery, dashboard, and reports
+matplotlib>=3.8.0,<4.0.0
+Pillow>=10.0.0,<13.0.0
+plotly>=5.18.0,<7.0.0
+reportlab>=4.0.0,<5.0.0
 
-# --- Heliophysics: Parker Solar Probe FIELDS / SWEAP / ISoIS / WISPR ---
-# Transitives pulled in automatically: cdflib, pytplot (or pytplot-mpl-temp),
-# pandas, xarray, h5py, netCDF4, PyWavelets
-pyspedas>=1.7.0
+# Solar physics, FITS, WCS, VSO, JSOC, and Parker Solar Probe
+astropy>=6.0.0,<9.0.0
+sunpy[all]>=7.0.0,<9.0.0
+pyspedas>=2.2.0,<3.0.0
+pytplot>=1.7.0,<2.0.0
+cdasws>=1.8.0,<2.0.0
 
-# --- Optional outputs ---
-# Drop if you always run with --no-interactive / --no-pdf
-plotly>=5.18.0
-reportlab>=4.0.0
+# Parquet telemetry export and ONNX nowcasting
+pyarrow>=17.0.0,<23.0.0
+onnxruntime>=1.18.0,<2.0.0
+
+# Interactive Python support
+ipython>=8.27.0,<11.0.0
